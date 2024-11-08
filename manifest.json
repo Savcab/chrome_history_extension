@@ -1,0 +1,31 @@
+{
+    "manifest_version": 3,
+    "name": "Chrome History Visualizer",
+    "description": "Base Level Extension",
+    "version": "1.0",
+    "action": {
+        "default_title": "See your history",
+        "default_popup": "popup/interface.html",
+        "default_icon": "icon.jpg"
+    },
+    "chrome_url_overrides": {
+        "history": "overrides/history/index.html"
+    },
+    "content_scripts": [
+        {
+            "js": ["content_scripts/history_page.js"],
+            "matches": [
+                "https://www.google.com/*"
+            ]
+        }
+    ],
+    "permissions": [
+        "history",
+        "alarms"
+    ],
+    "background": {
+        "service_worker": "background.js"
+    }
+  }
+
+  
