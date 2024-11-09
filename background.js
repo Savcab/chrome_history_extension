@@ -1,7 +1,7 @@
-// alarm names
+// Global configurable variables
 const NEWDAY_ALARM = "newday";
 const SESHEND_ALARM = "sesh-end";
-const TIMEOUT = 10; // 10 minutes
+const TIMEOUT = 1; // 10 minutes
 
 // The keys of chrome.storage.local:
 // "active"
@@ -12,15 +12,21 @@ const TIMEOUT = 10; // 10 minutes
 // "currDate" - the current date
 
 function getMinutesUntilMidnight() {
-    const now = new Date();
+    const now = Date.now();
      // add 2 minute as buffer
-    const nextMidnight = new Date(now + 2 * 60 * 1000).setHours(24, 0, 0, 0);
-    return Math.floor(nextMidnight - now / 60000);
+    const bufferTime = new Date(now + 2 * 60 * 1000);
+    bufferTime.setHours(24, 0, 0, 0);
+    const nextMidnight = bufferTime.getTime();
+    return Math.floor((nextMidnight - now) / 60000);
 }
 
 async function activeSeshStart(time) {
-    await chrome.storage.local.set("active", true);
-    await chrome.storage.local.set("currSesh", { start: time });
+    await chrome.storage.local.set({
+        "active": true,
+        "currSesh": { 
+            "start": time 
+        },
+    });
     await chrome.alarms.create(SESHEND_ALARM, {
         delayInMinutes: TIMEOUT,
     });
@@ -28,31 +34,34 @@ async function activeSeshStart(time) {
 
 // No time needed because uses lastUserEvent + TIMEOUT
 async function activeSeshEnd() {
-    if (await chrome.storage.local.get("active") === false) {
+    if (await chrome.storage.local.get("active").active === false) {
         return;
     }
-    await chrome.storage.local.set("active", false);
+    const {lastUserEvent, currSesh, currScreentime} = await chrome.storage.local.get(["lastUserEvent", "currSesh", "currScreentime"]);
     // Update currSesh using lastUserEvent + TIMEOUT
-    const lastUserEvent = await chrome.storage.local.get("lastUserEvent");
-    const currSesh = await chrome.storage.local.get("currSesh");
     currSesh.end = lastUserEvent + TIMEOUT * 1000 * 60;
     // Update currScreentimes
-    const screentime = await chrome.storage.local.get("currScreentime");
-    screentime.push(currSesh);
+    currScreentime.push(currSesh);
     // Set requests
-    await chrome.storage.local.set("currScreentime", screentime);
-    await chrome.storage.local.set("currSesh", {});
+    await chrome.storage.local.set({
+        "currScreentime": currScreentime,
+        "currSesh": {},
+        "active": false,
+    });
+    console.log("Sesh ended");
 }
 
 // Designed like this to minimize number of async calls
 async function recordUserEvent(time) {
-    await chrome.storage.local.set("lastUserEvent", time);
+    console.log(time);
+    await chrome.storage.local.set({"lastUserEvent": time});
 }
 
 async function userEventCallback() {
-    const now = new Date();
+    const now = Date.now();
+    console.log(now);
     await recordUserEvent(now);
-    const active = await chrome.storage.local.get("active");
+    const active = (await chrome.storage.local.get("active")).active;
     if (!active) {
         await activeSeshStart(now);
     } else {
@@ -64,36 +73,49 @@ async function userEventCallback() {
 }
 
 async function updatePastScreentimes(keepDays) {
+    const {currScreentime, pastScreentimes} = await chrome.storage.local.get(["currScreentime", "pastScreentimes"]);
     // yesterdays string
-    const thisScreentime = await chrome.storage.local.get("currScreentime");
     const yday = new Date();
     yday.setDate(yday.getDate() - 1);
     const ydayStr = yday.toLocaleDateString();
-    // 6 days ago
+    // Calculate the stale date
     const staleDate = new Date();
     staleDate.setDate(yday.getDate() - keepDays);
     const staleDateStr = staleDate.toLocaleDateString();
     // update pastScreentimes
-    const pastScreentimes = await chrome.storage.local.get("pastScreentimes");
     if (staleDateStr in pastScreentimes) {
         delete pastScreentimes[staleDateStr];
     }
-    pastScreentimes[ydayStr] = thisScreentime;
+    pastScreentimes[ydayStr] = currScreentime;
     // make the calls
-    await chrome.storage.local.set("pastScreentimes", pastScreentimes);
-    await chrome.storage.local.set("currScreentime", {});
+    await chrome.storage.local.set({
+        "pastScreentimes": pastScreentimes,
+        "currScreentime": {}
+    })
 }
 
 // Set up "cron job" to run every day at midnight
-chrome.runtime.onInstalled.addListener(async () => {
+chrome.runtime.onInstalled.addListener(async ({reason}) => {
     // Only on first install, not on update, chrome update, etc.
-    if (reason!== "install") {
+    if (reason !== "install") {
         return;
     }
     await chrome.alarms.create(NEWDAY_ALARM, {
         delayInMinutes: getMinutesUntilMidnight(),
     });
+    // Initialize the storage
+    await chrome.storage.local.set({
+        "active": false,
+        "currSesh": {},
+        "lastUserEvent": 0,
+        "pastScreentimes": {},
+        "currScreentime": [],
+        "currDate": new Date().toLocaleDateString(),
+    });
 });
+
+// Event listeners for user actions - just this for test for now
+chrome.action.onClicked.addListener(userEventCallback);
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
     // At 0:00 everyday

@@ -5,7 +5,6 @@
     "version": "1.0",
     "action": {
         "default_title": "See your history",
-        "default_popup": "popup/interface.html",
         "default_icon": "icon.jpg"
     },
     "chrome_url_overrides": {
@@ -21,7 +20,8 @@
     ],
     "permissions": [
         "history",
-        "alarms"
+        "alarms",
+        "storage"
     ],
     "background": {
         "service_worker": "background.js"
