@@ -11,6 +11,13 @@ const KEEP_DAYS = 7;
 // "pastScreentimes" - with subkeys "11/7/2024" as dates, then inside are list of "start" and "end"
 // "currScreentime" - a list of "start" and "end"s
 // "currDate" - the current date
+// "currTabHistory" - a list of objects with "url" and "timestamp"
+// "pastTabHistories" - a keys of "11/7/2024" as dates, then inside are list of "url" and "timestamp"
+
+
+/**
+ * HELPER FUNCTIONS
+ */
 
 function getMinutesUntilMidnight() {
     const now = Date.now();
@@ -77,33 +84,44 @@ async function userEventCallback() {
     }
 }
 
+// Helper function to clear data from stale dates
+function clearStaleDates(pastHistories, staleDate) {
+    for (const date of pastHistories) {
+        timestamp = (new Date(date)).getTime();
+        if (timestamp <= staleDate.getTime()) {
+            delete pastHistories[date];
+        }
+    }
+}
+
 // Called at the end of the day to add the last screentime to pastScreentimes
-async function updatePastScreentimes(keepDays) {
-    const {currScreentime, pastScreentimes} = await chrome.storage.local.get(["currScreentime", "pastScreentimes"]);
-    // yesterdays string
-    const yday = new Date();
-    yday.setDate(yday.getDate() - 1);
-    const ydayStr = yday.toLocaleDateString();
+async function updateToNewDay(keepDays) {
+    const {currScreentime, pastScreentimes, currTabHistory, pastTabHistories, currDate} = await chrome.storage.local.get(["currScreentime", "pastScreentimes", "currTabHistory", "pastTabHistories", "currDate"]);
     // Calculate the stale date 
+    const currDateObj = new Date(currDate);
     const staleDate = new Date();
-    staleDate.setDate(yday.getDate() - keepDays);
+    staleDate.setDate(currDateObj.getDate() - keepDays);
     // Calculate today's date
     const todayStr = (new Date()).toLocaleDateString();
     // update pastScreentimes
-    for (const date of pastScreentimes) {
-        timestamp = (new Date(date)).getTime();
-        if (timestamp <= staleDate.getTime()) {
-            delete pastScreentimes[date];
-        }
-    }
-    pastScreentimes[ydayStr] = currScreentime;
+    clearStaleDates(pastScreentimes, staleDate.getTime());
+    pastScreentimes[currDate] = currScreentime;
+    // update pastTabHistories
+    clearStaleDates(pastTabHistories, staleDate.getTime());
+    pastTabHistories[currDate] = currTabHistory;
     // make the calls
     await chrome.storage.local.set({
         "pastScreentimes": pastScreentimes,
+        "pastTabHistories": pastTabHistories,
         "currScreentime": {},
+        "currTabHistory": {},
         "currDate": todayStr,
     })
 }
+
+/**
+ * LISTENERS
+ */
 
 // On first install, setup everything
 chrome.runtime.onInstalled.addListener(async ({reason}) => {
@@ -123,7 +141,27 @@ chrome.runtime.onInstalled.addListener(async ({reason}) => {
         "pastScreentimes": {},
         "currScreentime": [],
         "currDate": new Date().toLocaleDateString(),
+        "currTabHistory": [],
+        "pastTabHistories": {},
     });
+});
+
+// Detect when tabs are changed
+chrome.tabs.onActivated.addListener(async (activeInfo) => {
+    try {
+    console.log("Tab activated: ", activeInfo);
+    const currTab = await chrome.tabs.get(activeInfo.tabId);
+    const {currTabHistory} = await chrome.storage.local.get("currTabHistory");
+    currTabHistory.push({
+        "url": currTab.url,
+        "timestamp": Date.now(),
+    });
+    await chrome.storage.local.set({
+        "currTabHistory": currTabHistory,
+    });
+    } catch(e) {
+        console.error("Error in onActivated: ", e);
+    }
 });
 
 // When received message from content scripts about user action
@@ -141,7 +179,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
         await chrome.alarms.create(NEWDAY_ALARM, {
             delayInMinutes: getMinutesUntilMidnight(),
         });
-        await updatePastScreentimes(KEEP_DAYS);
+        await updateToNewDay(KEEP_DAYS);
 
     } else if (alarm.name === SESHEND_ALARM) {
         await activeSeshEnd();
