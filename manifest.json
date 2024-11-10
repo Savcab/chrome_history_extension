@@ -12,10 +12,8 @@
     },
     "content_scripts": [
         {
-            "js": ["content_scripts/history_page.js"],
-            "matches": [
-                "https://www.google.com/*"
-            ]
+            "js": ["content_scripts/everypage.js"],
+            "matches": ["<all_urls>"]
         }
     ],
     "permissions": [

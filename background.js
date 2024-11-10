@@ -2,6 +2,7 @@
 const NEWDAY_ALARM = "newday";
 const SESHEND_ALARM = "sesh-end";
 const TIMEOUT = 1; // 10 minutes
+const KEEP_DAYS = 7;
 
 // The keys of chrome.storage.local:
 // "active"
@@ -34,7 +35,8 @@ async function activeSeshStart(time) {
 
 // No time needed because uses lastUserEvent + TIMEOUT
 async function activeSeshEnd() {
-    if (await chrome.storage.local.get("active").active === false) {
+    const {active} = await chrome.storage.local.get("active");
+    if (!active) {
         return;
     }
     const {lastUserEvent, currSesh, currScreentime} = await chrome.storage.local.get(["lastUserEvent", "currSesh", "currScreentime"]);
@@ -53,15 +55,18 @@ async function activeSeshEnd() {
 
 // Designed like this to minimize number of async calls
 async function recordUserEvent(time) {
-    console.log(time);
     await chrome.storage.local.set({"lastUserEvent": time});
 }
 
+// Called everytime a "user action" that indicates the user is active on the browser occurs
 async function userEventCallback() {
+    // DEBUGGING
+    console.log("User event callback");
+    console.log(Date.now());
+
     const now = Date.now();
-    console.log(now);
     await recordUserEvent(now);
-    const active = (await chrome.storage.local.get("active")).active;
+    const {active} = await chrome.storage.local.get("active")
     if (!active) {
         await activeSeshStart(now);
     } else {
@@ -72,34 +77,41 @@ async function userEventCallback() {
     }
 }
 
+// Called at the end of the day to add the last screentime to pastScreentimes
 async function updatePastScreentimes(keepDays) {
     const {currScreentime, pastScreentimes} = await chrome.storage.local.get(["currScreentime", "pastScreentimes"]);
     // yesterdays string
     const yday = new Date();
     yday.setDate(yday.getDate() - 1);
     const ydayStr = yday.toLocaleDateString();
-    // Calculate the stale date
+    // Calculate the stale date 
     const staleDate = new Date();
     staleDate.setDate(yday.getDate() - keepDays);
-    const staleDateStr = staleDate.toLocaleDateString();
+    // Calculate today's date
+    const todayStr = (new Date()).toLocaleDateString();
     // update pastScreentimes
-    if (staleDateStr in pastScreentimes) {
-        delete pastScreentimes[staleDateStr];
+    for (const date of pastScreentimes) {
+        timestamp = (new Date(date)).getTime();
+        if (timestamp <= staleDate.getTime()) {
+            delete pastScreentimes[date];
+        }
     }
     pastScreentimes[ydayStr] = currScreentime;
     // make the calls
     await chrome.storage.local.set({
         "pastScreentimes": pastScreentimes,
-        "currScreentime": {}
+        "currScreentime": {},
+        "currDate": todayStr,
     })
 }
 
-// Set up "cron job" to run every day at midnight
+// On first install, setup everything
 chrome.runtime.onInstalled.addListener(async ({reason}) => {
     // Only on first install, not on update, chrome update, etc.
     if (reason !== "install") {
         return;
     }
+    // Create the "cronjob" newday alarms
     await chrome.alarms.create(NEWDAY_ALARM, {
         delayInMinutes: getMinutesUntilMidnight(),
     });
@@ -114,8 +126,13 @@ chrome.runtime.onInstalled.addListener(async ({reason}) => {
     });
 });
 
-// Event listeners for user actions - just this for test for now
-chrome.action.onClicked.addListener(userEventCallback);
+// When received message from content scripts about user action
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    console.log("User action received: ", message.payload)
+    if (message.type === "USERACTION") {
+        userEventCallback();
+    }
+});
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
     // At 0:00 everyday
@@ -124,6 +141,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
         await chrome.alarms.create(NEWDAY_ALARM, {
             delayInMinutes: getMinutesUntilMidnight(),
         });
+        await updatePastScreentimes(KEEP_DAYS);
 
     } else if (alarm.name === SESHEND_ALARM) {
         await activeSeshEnd();
