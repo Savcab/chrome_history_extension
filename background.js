@@ -21,11 +21,12 @@ const KEEP_DAYS = 7;
 
 function getMinutesUntilMidnight() {
     const now = Date.now();
-     // add 2 minute as buffer
-    const bufferTime = new Date(now + 2 * 60 * 1000);
-    bufferTime.setHours(24, 0, 0, 0);
-    const nextMidnight = bufferTime.getTime();
-    return Math.floor((nextMidnight - now) / 60000);
+    // Add buffer time of 2 minutes to ensure the next alarms goes off the start of next day
+    const bufferTime = 2; 
+    const midnightTime = new Date(now + 2 * 60 * 1000);
+    midnightTime.setHours(24, 0, 0, 0);
+    const nextMidnight = midnightTime.getTime();
+    return Math.floor((nextMidnight - now) / 60000) + bufferTime;
 }
 
 async function activeSeshStart(time) {
@@ -86,7 +87,7 @@ async function userEventCallback() {
 
 // Helper function to clear data from stale dates
 function clearStaleDates(pastHistories, staleDate) {
-    for (const date of pastHistories) {
+    for (const date in pastHistories) {
         timestamp = (new Date(date)).getTime();
         if (timestamp <= staleDate.getTime()) {
             delete pastHistories[date];
@@ -95,8 +96,11 @@ function clearStaleDates(pastHistories, staleDate) {
 }
 
 // Called at the end of the day to add the last screentime to pastScreentimes
+// STOP ANY CURRENT SESSION
 async function updateToNewDay(keepDays) {
     const {currScreentime, pastScreentimes, currTabHistory, pastTabHistories, currDate} = await chrome.storage.local.get(["currScreentime", "pastScreentimes", "currTabHistory", "pastTabHistories", "currDate"]);
+    // Stops any currently active sessions
+    await activeSeshEnd();
     // Calculate the stale date 
     const currDateObj = new Date(currDate);
     const staleDate = new Date();
@@ -113,8 +117,8 @@ async function updateToNewDay(keepDays) {
     await chrome.storage.local.set({
         "pastScreentimes": pastScreentimes,
         "pastTabHistories": pastTabHistories,
-        "currScreentime": {},
-        "currTabHistory": {},
+        "currScreentime": [],
+        "currTabHistory": [],
         "currDate": todayStr,
     })
 }
@@ -125,63 +129,76 @@ async function updateToNewDay(keepDays) {
 
 // On first install, setup everything
 chrome.runtime.onInstalled.addListener(async ({reason}) => {
-    // Only on first install, not on update, chrome update, etc.
-    if (reason !== "install") {
-        return;
+    try{
+        // Only on first install, not on update, chrome update, etc.
+        if (reason !== "install") {
+            return;
+        }
+        // Create the "cronjob" newday alarms
+        await chrome.alarms.create(NEWDAY_ALARM, {
+            delayInMinutes: getMinutesUntilMidnight(),
+        });
+        // Initialize the storage
+        await chrome.storage.local.set({
+            "active": false,
+            "currSesh": {},
+            "lastUserEvent": 0,
+            "pastScreentimes": {},
+            "currScreentime": [],
+            "currDate": new Date().toLocaleDateString(),
+            "currTabHistory": [],
+            "pastTabHistories": {},
+        });
+    } catch(e) {
+        console.error("BACKGROUND.JS: Error in onInstalled", e);
     }
-    // Create the "cronjob" newday alarms
-    await chrome.alarms.create(NEWDAY_ALARM, {
-        delayInMinutes: getMinutesUntilMidnight(),
-    });
-    // Initialize the storage
-    await chrome.storage.local.set({
-        "active": false,
-        "currSesh": {},
-        "lastUserEvent": 0,
-        "pastScreentimes": {},
-        "currScreentime": [],
-        "currDate": new Date().toLocaleDateString(),
-        "currTabHistory": [],
-        "pastTabHistories": {},
-    });
 });
 
 // Detect when tabs are changed
 chrome.tabs.onActivated.addListener(async (activeInfo) => {
     try {
-    console.log("Tab activated: ", activeInfo);
-    const currTab = await chrome.tabs.get(activeInfo.tabId);
-    const {currTabHistory} = await chrome.storage.local.get("currTabHistory");
-    currTabHistory.push({
-        "url": currTab.url,
-        "timestamp": Date.now(),
-    });
-    await chrome.storage.local.set({
-        "currTabHistory": currTabHistory,
-    });
+        console.log("Tab activated: ", activeInfo);
+        const currTab = await chrome.tabs.get(activeInfo.tabId);
+        const {currTabHistory} = await chrome.storage.local.get("currTabHistory");
+        currTabHistory.push({
+            "url": currTab.url,
+            "timestamp": Date.now(),
+        });
+        await chrome.storage.local.set({
+            "currTabHistory": currTabHistory,
+        });
     } catch(e) {
-        console.error("Error in onActivated: ", e);
+        console.error("BACKGROUND.JS: Error in onActivated: ", e);
     }
 });
 
 // When received message from content scripts about user action
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    console.log("User action received: ", message.payload)
-    if (message.type === "USERACTION") {
-        userEventCallback();
+    try {
+        console.log("User action received: ", message.payload)
+        if (message.type === "USERACTION") {
+            userEventCallback();
+        }
+    } catch(e) {
+        console.error("BACKGROUND.JS: Error in onMessage: ", e);
     }
 });
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
-    // At 0:00 everyday
-    if (alarm.name === NEWDAY_ALARM) {
-        // Schedule the next alarm
-        await chrome.alarms.create(NEWDAY_ALARM, {
-            delayInMinutes: getMinutesUntilMidnight(),
-        });
-        await updateToNewDay(KEEP_DAYS);
+    try {
+        // At 0:00 everyday
+        if (alarm.name === NEWDAY_ALARM) {
+            // Schedule the next alarm
+            console.log("BACKGROUND SCRIPT: newday alarm went off!");
+            await chrome.alarms.create(NEWDAY_ALARM, {
+                delayInMinutes: getMinutesUntilMidnight(),
+            });
+            await updateToNewDay(KEEP_DAYS);
 
-    } else if (alarm.name === SESHEND_ALARM) {
-        await activeSeshEnd();
+        } else if (alarm.name === SESHEND_ALARM) {
+            await activeSeshEnd();
+        }
+    } catch(e) {
+        console.error("BACKGROUND.JS: Error in onAlarm: ", e);
     }
 });
