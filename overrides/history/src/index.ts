@@ -1,3 +1,5 @@
+import './page/page.ts'
+
 const startOfDay = new Date();
 startOfDay.setHours(0, 0, 0, 0);
 const startOfDayTimestamp = startOfDay.getTime();
@@ -19,3 +21,6 @@ chrome.history.search({
     console.log("currScreentime: ", await chrome.storage.local.get(null));
     console.log("lastUserEvent: ", await chrome.storage.local.get("lastUserEvent"));
 })();
+
+
+document.querySelector('body')!.innerHTML = '<page></page>';
