@@ -1,2 +1,5 @@
 # Node modules
 node_modules/
+
+# The output of built typescript
+overrides/history/build/

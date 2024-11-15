@@ -8,7 +8,7 @@
         "default_icon": "icon.jpg"
     },
     "chrome_url_overrides": {
-        "history": "overrides/history/index.html"
+        "history": "overrides/history/dist/index.html"
     },
     "content_scripts": [
         {
