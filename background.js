@@ -87,9 +87,10 @@ async function userEventCallback() {
 
 // Helper function to clear data from stale dates
 function clearStaleDates(pastHistories, staleDate) {
+    const staleDateTimestamp = staleDate.getTime();
     for (const date in pastHistories) {
         timestamp = (new Date(date)).getTime();
-        if (timestamp <= staleDate.getTime()) {
+        if (timestamp <= staleDateTimestamp) {
             delete pastHistories[date];
         }
     }
@@ -108,10 +109,10 @@ async function updateToNewDay(keepDays) {
     // Calculate today's date
     const todayStr = (new Date()).toLocaleDateString();
     // update pastScreentimes
-    clearStaleDates(pastScreentimes, staleDate.getTime());
+    clearStaleDates(pastScreentimes, staleDate);
     pastScreentimes[currDate] = currScreentime;
     // update pastTabHistories
-    clearStaleDates(pastTabHistories, staleDate.getTime());
+    clearStaleDates(pastTabHistories, staleDate);
     pastTabHistories[currDate] = currTabHistory;
     // make the calls
     await chrome.storage.local.set({
