@@ -168,6 +168,9 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
         await chrome.storage.local.set({
             "currTabHistory": currTabHistory,
         });
+
+        // Also call an active session when tab is changed
+        userEventCallback();
     } catch(e) {
         console.error("BACKGROUND.JS: Error in onActivated: ", e);
     }
