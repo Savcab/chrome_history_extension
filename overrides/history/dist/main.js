@@ -12,6 +12,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _node_modules_lit__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../node_modules/lit */ "./node_modules/lit/index.js");
 /* harmony import */ var _node_modules_lit_decorators__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../node_modules/lit/decorators */ "./node_modules/lit/decorators.js");
 /* harmony import */ var _style__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./style */ "./src/page/style.ts");
+/* harmony import */ var _userHistory_userHistory__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../userHistory/userHistory */ "./src/userHistory/userHistory.ts");
 var __decorate = (undefined && undefined.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -21,12 +22,50 @@ var __decorate = (undefined && undefined.__decorate) || function (decorators, ta
 
 
 
+
 let Page = class Page extends _node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.LitElement {
+    constructor() {
+        super(...arguments);
+        this._currScreentime = [];
+    }
+    async firstUpdated() {
+        // const {currScreentime} = await chrome.storage.local.get(["currScreentime"]);
+        // this._currScreentime = currScreentime;
+        // FOR LOCALHOST TESTING
+        this._currScreentime = [
+            { end: 1732140108837, start: 1732140048837 },
+            { end: 1732140795572, start: 1732140729236 },
+            { end: 1732142662041, start: 1732142598833 },
+            { end: 1732143640562, start: 1732143580562 },
+            { end: 1732150249553, start: 1732150128921 },
+            { end: 1732150350664, start: 1732150290664 },
+            { end: 1732150498613, start: 1732150374938 },
+            { end: 1732152229068, start: 1732152165990 },
+            { end: 1732152330368, start: 1732152259268 },
+            { end: 1732152513593, start: 1732152336762 },
+            { end: 1732154222319, start: 1732154075215 },
+            { end: 1732154707749, start: 1732154638331 },
+            { end: 1732154791390, start: 1732154726640 },
+            { end: 1732154878571, start: 1732154818571 },
+            { end: 1732155412763, start: 1732155269003 },
+            { end: 1732155600959, start: 1732155494096 },
+            { end: 1732155807829, start: 1732155686541 },
+            { end: 1732156001651, start: 1732155899047 },
+            { end: 1732156172281, start: 1732156112281 },
+            { end: 1732156617765, start: 1732156296749 },
+            { end: 1732156739528, start: 1732156640000 },
+            { end: 1732156885970, start: 1732156761658 },
+            { end: 1732156973612, start: 1732156909474 }
+        ];
+    }
+    /*
+     * HELPER FUNCTIONS
+     */
     render() {
         return (0,_node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.html) `
             <div id='mainbody'>
                 <div class='left-half'>
-                    <lit-user-history></lit-user-history>
+                    <lit-user-history .activities=${this._currScreentime}></lit-user-history>
                 </div>
                 <div class='right-half'>
                     <lit-session-details class='right-item'></lit-session-details>
@@ -37,6 +76,9 @@ let Page = class Page extends _node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.Lit
     }
 };
 Page.styles = _style__WEBPACK_IMPORTED_MODULE_2__.styles;
+__decorate([
+    (0,_node_modules_lit_decorators__WEBPACK_IMPORTED_MODULE_1__.state)()
+], Page.prototype, "_currScreentime", void 0);
 Page = __decorate([
     (0,_node_modules_lit_decorators__WEBPACK_IMPORTED_MODULE_1__.customElement)('lit-page')
 ], Page);
@@ -64,17 +106,19 @@ const styles = (0,lit__WEBPACK_IMPORTED_MODULE_0__.css) `
     }
 
     #mainbody {
+        box-sizing: border-box;
         display: flex;
         height: 100%;
     }
 
     .left-half {
+        box-sizing: border-box;
         flex: 1;
-        border: 1px solid black;
         height: 100%;
     }
 
     .right-half {
+        box-sizing: border-box;
         flex: 1;
         border: 1px solid black;
         height: 100%;
@@ -88,6 +132,201 @@ const styles = (0,lit__WEBPACK_IMPORTED_MODULE_0__.css) `
 
 
 `;
+
+
+/***/ }),
+
+/***/ "./src/userHistory/style.ts":
+/*!**********************************!*\
+  !*** ./src/userHistory/style.ts ***!
+  \**********************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   styles: () => (/* binding */ styles)
+/* harmony export */ });
+/* harmony import */ var lit__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! lit */ "./node_modules/lit/index.js");
+
+// 100vh = 12 hours
+const slotHeight = 100 / (24 * 4);
+const styles = (0,lit__WEBPACK_IMPORTED_MODULE_0__.css) `
+
+:host {
+    display: block;
+    height: 100%;
+    width: 100%;
+}
+
+.mainbody {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+.date {
+    box-sizing: border-box;
+    display: flex;
+    justify-content: center;
+    padding: 5px;
+    font-size: 1.25em;
+    font-weight: bold;
+    height: 5%;
+}
+
+.timeline-scrolling-container {
+    box-sizing: border-box;
+    width: 100%;
+    height: 95%;
+    overflow-y: scroll;
+    padding: 15px;
+}
+
+.timeline {
+    margin: 15px;
+    width: 80%;
+    margin-left: 10%;
+    position: relative;
+}
+
+.timeslot {
+    border: 1px rgb(200, 200, 200) solid;
+    border-left: 1px solid black;
+    border-right: 1px solid black;
+    height: 20px;
+}
+
+.timeslot.hour-start {
+    border-top: 1px solid black;
+}
+
+.timeslot.hour-end {
+    border-bottom: 1px solid black;
+}
+
+.timestamp {
+    width: fit-content;
+    transform: translate(-120%, -50%);
+}
+
+.activity {
+    box-sizing: border-box;
+    width: 100%;
+    position: absolute;
+    background-color: red;
+}
+
+
+`;
+
+
+/***/ }),
+
+/***/ "./src/userHistory/userHistory.ts":
+/*!****************************************!*\
+  !*** ./src/userHistory/userHistory.ts ***!
+  \****************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var lit__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! lit */ "./node_modules/lit/index.js");
+/* harmony import */ var lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! lit/decorators.js */ "./node_modules/lit/decorators.js");
+/* harmony import */ var _style__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./style */ "./src/userHistory/style.ts");
+var __decorate = (undefined && undefined.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+
+
+
+let UserHistory = class UserHistory extends lit__WEBPACK_IMPORTED_MODULE_0__.LitElement {
+    constructor() {
+        super(...arguments);
+        this.date = new Date().toDateString();
+        this.activities = [];
+    }
+    /*
+     * HELPER FUNCTIONS
+     */
+    _getTimestampText(hour) {
+        if (hour < 12) {
+            return `${hour} AM`;
+        }
+        else if (hour === 12) {
+            return `12 PM`;
+        }
+        else {
+            return `${hour - 12} PM`;
+        }
+    }
+    // Converts an ActivitySession to HTML
+    _activityMapHTML(activity) {
+        try {
+            const dayStartEpoch = (new Date(this.date)).getTime();
+            const startRelEpoch = activity.start - dayStartEpoch;
+            const endRelEpoch = activity.end - dayStartEpoch;
+            console.log("duration in milliseconds: ", endRelEpoch - startRelEpoch);
+            console.log("duration in minutes: ", (endRelEpoch - startRelEpoch) / 1000 / 60);
+            console.log("started in hours: ", startRelEpoch / 1000 / 60 / 60);
+            // 100vh = 12 hours
+            const msToVh = (ms) => ms / 1000 / 60 / 60 * 100 / 12;
+            const inlineStyle = `
+                top: ${msToVh(startRelEpoch)}vh;
+                height: ${msToVh(endRelEpoch - startRelEpoch)}vh;
+            `;
+            return (0,lit__WEBPACK_IMPORTED_MODULE_0__.html) `
+                <div class="activity" style=${inlineStyle}>
+                </div>
+            `;
+        }
+        catch (e) {
+            console.error(e);
+            return (0,lit__WEBPACK_IMPORTED_MODULE_0__.html) ``;
+        }
+    }
+    render() {
+        let timeslots = [];
+        for (let i = 0; i < 24; i++) {
+            for (let j = 0; j < 4; j++) {
+                timeslots.push({ hour: i, quarterHour: j });
+            }
+        }
+        return (0,lit__WEBPACK_IMPORTED_MODULE_0__.html) `
+            <div class="mainbody">
+                <div class="date">${this.date}</div>
+                    <div class="timeline-scrolling-container">
+                        <div class="timeline">
+                            ${timeslots.map((timeslot) => {
+            return (0,lit__WEBPACK_IMPORTED_MODULE_0__.html) `
+                                    <div class="timeslot ${timeslot.quarterHour === 0 ? 'hour-start' : ''} ${timeslot.quarterHour === 3 ? 'hour-end' : ''}">
+                                        ${(timeslot.quarterHour === 0) ?
+                (0,lit__WEBPACK_IMPORTED_MODULE_0__.html) `<div class="timestamp">
+                                                    ${this._getTimestampText(timeslot.hour)}
+                                                </div>`
+                : ''}
+                                    </div>
+                                `;
+        })}
+
+                            ${this.activities.map((activity) => this._activityMapHTML(activity))}
+                        </div>
+                    </div>
+            </div>
+        `;
+    }
+};
+UserHistory.styles = _style__WEBPACK_IMPORTED_MODULE_2__.styles;
+__decorate([
+    (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.property)({ type: String, reflect: true })
+], UserHistory.prototype, "date", void 0);
+__decorate([
+    (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.property)({ type: Array, reflect: true })
+], UserHistory.prototype, "activities", void 0);
+UserHistory = __decorate([
+    (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.customElement)('lit-user-history')
+], UserHistory);
 
 
 /***/ }),
@@ -4035,22 +4274,26 @@ const startOfDay = new Date();
 startOfDay.setHours(0, 0, 0, 0);
 const startOfDayTimestamp = startOfDay.getTime();
 console.log("startOfDayTimestamp: " + startOfDayTimestamp);
-chrome.history.search({
-    text: '',
-    startTime: startOfDayTimestamp,
-    maxResults: 1000000 // basically no upper limit
-}, function (historyItems) {
-    console.log("in search");
-    console.log(historyItems);
-});
-// FOR TESTING
-(async function () {
-    console.log(chrome);
-    console.log("currScreentime: ", await chrome.storage.local.get(null));
-    console.log("lastUserEvent: ", await chrome.storage.local.get("lastUserEvent"));
-})();
+// chrome.history.search({
+//     text: '',
+//     startTime: startOfDayTimestamp,
+//     maxResults: 1000000 // basically no upper limit
+// }, function(historyItems) {
+//     console.log("in search")
+//     console.log(historyItems);
+// });
+// // FOR TESTING
+// (async function(){
+//     console.log(chrome);
+//     console.log("currScreentime: ", await chrome.storage.local.get(null));
+//     console.log("lastUserEvent: ", await chrome.storage.local.get("lastUserEvent"));
+// })();
 // Add the single Lit component that is the entire page
 document.querySelector('body').innerHTML = '<lit-page></lit-page>';
+// add styling tags on body
+document.querySelector('body').style.margin = "0";
+document.querySelector('body').style.width = "100vw";
+document.querySelector('body').style.height = "100vh";
 
 })();
 
