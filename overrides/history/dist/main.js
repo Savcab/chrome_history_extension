@@ -11,6 +11,7 @@
 __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _node_modules_lit__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../node_modules/lit */ "./node_modules/lit/index.js");
 /* harmony import */ var _node_modules_lit_decorators__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../node_modules/lit/decorators */ "./node_modules/lit/decorators.js");
+/* harmony import */ var _style__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./style */ "./src/page/style.ts");
 var __decorate = (undefined && undefined.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -19,19 +20,74 @@ var __decorate = (undefined && undefined.__decorate) || function (decorators, ta
 };
 
 
+
 let Page = class Page extends _node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.LitElement {
     render() {
         return (0,_node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.html) `
-            <div id="mainbody">
-                <div>PAGE 1</div>
-                <div>PAGE 2</div>
+            <div id='mainbody'>
+                <div class='left-half'>
+                    <lit-user-history></lit-user-history>
+                </div>
+                <div class='right-half'>
+                    <lit-session-details class='right-item'></lit-session-details>
+                    <lit-timechart class='right-item'></lit-timechart>
+                </div>
             </div>
         `;
     }
 };
+Page.styles = _style__WEBPACK_IMPORTED_MODULE_2__.styles;
 Page = __decorate([
     (0,_node_modules_lit_decorators__WEBPACK_IMPORTED_MODULE_1__.customElement)('lit-page')
 ], Page);
+
+
+/***/ }),
+
+/***/ "./src/page/style.ts":
+/*!***************************!*\
+  !*** ./src/page/style.ts ***!
+  \***************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   styles: () => (/* binding */ styles)
+/* harmony export */ });
+/* harmony import */ var lit__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! lit */ "./node_modules/lit/index.js");
+
+const styles = (0,lit__WEBPACK_IMPORTED_MODULE_0__.css) `
+    :host {
+        display: block;
+        height: 100vh;
+        width: 100vw;
+    }
+
+    #mainbody {
+        display: flex;
+        height: 100%;
+    }
+
+    .left-half {
+        flex: 1;
+        border: 1px solid black;
+        height: 100%;
+    }
+
+    .right-half {
+        flex: 1;
+        border: 1px solid black;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .right-item {
+        flex: 1;
+    }
+
+
+`;
 
 
 /***/ }),
@@ -3993,7 +4049,8 @@ chrome.history.search({
     console.log("currScreentime: ", await chrome.storage.local.get(null));
     console.log("lastUserEvent: ", await chrome.storage.local.get("lastUserEvent"));
 })();
-document.querySelector('body').innerHTML = '<page></page>';
+// Add the single Lit component that is the entire page
+document.querySelector('body').innerHTML = '<lit-page></lit-page>';
 
 })();
 

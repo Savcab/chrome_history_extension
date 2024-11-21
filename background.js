@@ -1,7 +1,7 @@
 // Global configurable variables
 const NEWDAY_ALARM = "newday";
 const SESHEND_ALARM = "sesh-end";
-const TIMEOUT = 1; // 10 minutes
+const TIMEOUT = 10; // 10 minutes
 const KEEP_DAYS = 7;
 
 // The keys of chrome.storage.local:
