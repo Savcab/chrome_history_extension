@@ -3,10 +3,11 @@ import { customElement, property } from 'lit/decorators.js';
 import {styles} from './style'
 import { ActivitySession } from '../types';
 import { styleMap } from 'lit/directives/style-map';
+import { hourToVh, timeslotsPerHour } from './constants';
 
 type TimeSlot = {
     hour: number;
-    quarterHour: number;
+    part: number;
 }
 
 @customElement('lit-user-history')
@@ -15,11 +16,13 @@ class UserHistory extends LitElement {
     static styles: CSSResultGroup = styles;
 
     @property({type: String, reflect: true})
-        date: string = new Date().toDateString();
+        date: string = "";
 
     @property({type: Array, reflect: true})
         activities: ActivitySession[] = [];
 
+    @property({type: Number, reflect: true})
+        currRelMinute: number = 0;
 
     /*
      * HELPER FUNCTIONS 
@@ -47,7 +50,7 @@ class UserHistory extends LitElement {
             console.log("started in hours: ", startRelEpoch / 1000 / 60 / 60);
 
             // 100vh = 12 hours
-            const msToVh = (ms: number) => ms / 1000 / 60 / 60 * 100 / 12;
+            const msToVh = (ms: number) => ms / 1000 / 60 / 60 * hourToVh;
             const inlineStyle = `
                 top: ${msToVh(startRelEpoch)}vh;
                 height: ${msToVh(endRelEpoch - startRelEpoch)}vh;
@@ -62,12 +65,22 @@ class UserHistory extends LitElement {
         }
     }
 
+    private _createPresentBarHtml(): TemplateResult {
+        const minToVh = (min: number) => min / 60 * hourToVh;
+        const inlineStyle = `top: ${minToVh(this.currRelMinute)}vh;`;
+        return html`
+            <div class="present-bar" style=${inlineStyle}>
+                <div class="present-bar-arrow"></div>
+            </div>
+        `;
+    }
+
 
     render() {
         let timeslots: TimeSlot[] = []
         for (let i = 0; i < 24; i++) {
-            for (let j = 0; j < 4; j++) {
-                timeslots.push({hour: i, quarterHour: j});
+            for (let j = 0; j < timeslotsPerHour; j++) {
+                timeslots.push({hour: i, part: j});
             }
         }
 
@@ -79,8 +92,8 @@ class UserHistory extends LitElement {
                         <div class="timeline">
                             ${timeslots.map((timeslot) => {
                                 return html`
-                                    <div class="timeslot ${timeslot.quarterHour === 0 ? 'hour-start' : ''} ${timeslot.quarterHour === 3 ? 'hour-end' : ''}">
-                                        ${ (timeslot.quarterHour === 0) ? 
+                                    <div class="timeslot ${timeslot.part === 0 ? 'hour-start' : ''} ${timeslot.part === timeslotsPerHour-1 ? 'hour-end' : ''}">
+                                        ${ (timeslot.part === 0) ? 
                                             html`<div class="timestamp">
                                                     ${this._getTimestampText(timeslot.hour)}
                                                 </div>` 
@@ -90,6 +103,8 @@ class UserHistory extends LitElement {
                             })}
 
                             ${this.activities.map((activity) => this._activityMapHTML(activity))}
+
+                            ${this._createPresentBarHtml()}
                         </div>
                     </div>
             </div>

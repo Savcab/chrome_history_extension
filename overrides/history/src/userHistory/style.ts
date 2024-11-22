@@ -1,7 +1,5 @@
 import { css } from "lit";
-
-// 100vh = 12 hours
-const slotHeight = 100 / (24 * 4);
+import { hourToVh, timeslotsPerHour } from "./constants";
 
 export const styles = css`
 
@@ -36,17 +34,20 @@ export const styles = css`
 }
 
 .timeline {
+    box-sizing: border-box;
     margin: 15px;
     width: 80%;
+    height: ${24 * hourToVh}vh;
     margin-left: 10%;
     position: relative;
 }
 
 .timeslot {
-    border: 1px rgb(200, 200, 200) solid;
+    box-sizing: border-box;
+    border: 1px rgb(220, 220, 220) solid;
     border-left: 1px solid black;
     border-right: 1px solid black;
-    height: 20px;
+    height: ${1 / timeslotsPerHour * hourToVh}vh;
 }
 
 .timeslot.hour-start {
@@ -67,6 +68,26 @@ export const styles = css`
     width: 100%;
     position: absolute;
     background-color: red;
+}
+
+.present-bar {
+    --bar-color: blue;
+
+    box-sizing: border-box;
+    width: 100%;
+    position: absolute;
+    background-color: var(--bar-color);
+    height: 0.30vh;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.present-bar-arrow {
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+    border-right: 10px solid var(--bar-color);
+    transform: translateX(80%);
 }
 
 
