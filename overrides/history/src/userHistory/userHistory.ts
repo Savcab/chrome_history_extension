@@ -4,6 +4,7 @@ import {styles} from './style'
 import { ActivitySession } from '../types';
 import { styleMap } from 'lit/directives/style-map';
 import { hourToVh, timeslotsPerHour } from './constants';
+import './session/session';
 
 type TimeSlot = {
     hour: number;
@@ -38,26 +39,22 @@ class UserHistory extends LitElement {
     }
 
     // Converts an ActivitySession to HTML
-    private _activityMapHTML(activity: ActivitySession): TemplateResult {
+    private _sessionMapHTML(session: ActivitySession, idx: number): TemplateResult {
         try {
             const dayStartEpoch = (new Date(this.date)).getTime();
-            const startRelEpoch = activity.start - dayStartEpoch;
-            const endRelEpoch = activity.end - dayStartEpoch;
+            const startRelEpoch = session.start - dayStartEpoch;
+            const endRelEpoch = session.end - dayStartEpoch;
 
-            console.log("duration in milliseconds: ", endRelEpoch - startRelEpoch);
             console.log("duration in minutes: ", (endRelEpoch - startRelEpoch) / 1000 / 60);
-
             console.log("started in hours: ", startRelEpoch / 1000 / 60 / 60);
-
-            // 100vh = 12 hours
-            const msToVh = (ms: number) => ms / 1000 / 60 / 60 * hourToVh;
-            const inlineStyle = `
-                top: ${msToVh(startRelEpoch)}vh;
-                height: ${msToVh(endRelEpoch - startRelEpoch)}vh;
-            `;
             return html`
-                <div class="activity" style=${inlineStyle}>
-                </div>
+                <lit-user-history-session
+                    start=${startRelEpoch}
+                    end=${endRelEpoch}
+                    idx=${idx}
+                >
+
+                </lit-user-history-session>
             `;
         } catch (e) {
             console.error(e);
@@ -102,7 +99,7 @@ class UserHistory extends LitElement {
                                 `;
                             })}
 
-                            ${this.sessions.map((activity) => this._activityMapHTML(activity))}
+                            ${this.sessions.map((session, idx) => this._sessionMapHTML(session, idx))}
 
                             ${this._createPresentBarHtml()}
                         </div>

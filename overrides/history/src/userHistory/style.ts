@@ -63,13 +63,6 @@ export const styles = css`
     transform: translate(-120%, -50%);
 }
 
-.activity {
-    box-sizing: border-box;
-    width: 100%;
-    position: absolute;
-    background-color: red;
-}
-
 .present-bar {
     --bar-color: blue;
 
