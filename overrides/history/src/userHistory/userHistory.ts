@@ -1,5 +1,5 @@
 import { LitElement, html, css, CSSResult, CSSResultGroup, TemplateResult } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
+import { customElement, property, state } from 'lit/decorators.js';
 import {styles} from './style'
 import { ActivitySession } from '../types';
 import { styleMap } from 'lit/directives/style-map';
@@ -24,6 +24,32 @@ class UserHistory extends LitElement {
 
     @property({type: Number, reflect: true})
         currRelMinute: number = 0;
+
+    @state()
+        _selectedSessionIdx = -1;
+
+
+    /*
+     * EVENT HANDLERS 
+     */
+    private _onSessionClick(event: CustomEvent) {
+        event.stopPropagation();
+        const clickedIdx = event.detail.idx;
+        if (this._selectedSessionIdx === clickedIdx) {
+            this._selectedSessionIdx = -1;
+        } else {
+            this._selectedSessionIdx = clickedIdx;
+        }
+
+        const selectedEvent = new CustomEvent('session-selected', {
+            detail: {
+                selectedIdx: this._selectedSessionIdx
+            },
+            bubbles: true,
+            composed: true
+        });
+        this.dispatchEvent(selectedEvent);
+    }
 
     /*
      * HELPER FUNCTIONS 
@@ -52,6 +78,7 @@ class UserHistory extends LitElement {
                     start=${startRelEpoch}
                     end=${endRelEpoch}
                     idx=${idx}
+                    ?selected=${idx === this._selectedSessionIdx}
                 >
 
                 </lit-user-history-session>
@@ -86,7 +113,10 @@ class UserHistory extends LitElement {
             <div class="mainbody">
                 <div class="date">${this.date}</div>
                     <div class="timeline-scrolling-container">
-                        <div class="timeline">
+                        <div class="timeline"
+                            @session-clicked=${this._onSessionClick}
+                        >
+                            <!-- The Timeslot templates -->
                             ${timeslots.map((timeslot) => {
                                 return html`
                                     <div class="timeslot ${timeslot.part === 0 ? 'hour-start' : ''} ${timeslot.part === timeslotsPerHour-1 ? 'hour-end' : ''}">
@@ -99,8 +129,12 @@ class UserHistory extends LitElement {
                                 `;
                             })}
 
-                            ${this.sessions.map((session, idx) => this._sessionMapHTML(session, idx))}
+                            <!-- The actual user activity sessions -->
+                            <!-- <div @click=${this._onSessionClick}> -->
+                                ${this.sessions.map((session, idx) => this._sessionMapHTML(session, idx))}
+                            <!-- </div> -->
 
+                            <!-- The present timestamp bar -->
                             ${this._createPresentBarHtml()}
                         </div>
                     </div>

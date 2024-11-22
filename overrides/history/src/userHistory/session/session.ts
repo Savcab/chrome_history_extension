@@ -16,29 +16,35 @@ export class Session extends LitElement {
     @property({type: Number, reflect: true})
         idx: number = 0;
 
+    @property({type: Boolean, reflect: true})
+        selected: boolean = false;
+
+
     /*
      * EVENT LISTENERS 
      */
     private _onMouseEnter(event: MouseEvent) {
         event.stopPropagation();
-        const emitEvent = new CustomEvent('session-hovered', {
+        const hoveredEvent = new CustomEvent('session-hovered', {
             detail: {
                 idx: this.idx
-            }
+            },
+            bubbles: true,
+            composed: true 
         });
-        this.dispatchEvent(emitEvent);
-        console.log("hovered: ", this.idx);
+        this.dispatchEvent(hoveredEvent);
     }
 
     private _onClick(event: MouseEvent) {
         event.stopPropagation();
-        const emitEvent = new CustomEvent('session-clicked', {
+        const clickedEvent = new CustomEvent('session-clicked', {
             detail: {
                 idx: this.idx
-            }
+            },
+            bubbles: true,
+            composed: true
         });
-        this.dispatchEvent(emitEvent);
-        console.log("clicked: ", this.idx)
+        this.dispatchEvent(clickedEvent);
     }
 
     /*
@@ -56,7 +62,7 @@ export class Session extends LitElement {
 
         return html`
             <div 
-                class="session" 
+                class="session ${this.selected ? "selected": ""}" 
                 style=${inlineStyle}
                 @mouseenter=${this._onMouseEnter}
                 @click=${this._onClick}
