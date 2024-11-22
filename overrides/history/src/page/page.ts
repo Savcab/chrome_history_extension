@@ -70,7 +70,7 @@ class Page extends LitElement {
             <div id='mainbody'>
                 <div class='left-half'>
                     <lit-user-history 
-                        .activities=${this._currScreentime}
+                        .sessions=${this._currScreentime}
                         date=${this._date}
                         currRelMinute=${this._currRelMinute}
                     ></lit-user-history>

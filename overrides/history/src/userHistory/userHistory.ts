@@ -19,7 +19,7 @@ class UserHistory extends LitElement {
         date: string = "";
 
     @property({type: Array, reflect: true})
-        activities: ActivitySession[] = [];
+        sessions: ActivitySession[] = [];
 
     @property({type: Number, reflect: true})
         currRelMinute: number = 0;
@@ -102,7 +102,7 @@ class UserHistory extends LitElement {
                                 `;
                             })}
 
-                            ${this.activities.map((activity) => this._activityMapHTML(activity))}
+                            ${this.sessions.map((activity) => this._activityMapHTML(activity))}
 
                             ${this._createPresentBarHtml()}
                         </div>
