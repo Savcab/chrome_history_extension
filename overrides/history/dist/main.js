@@ -13,6 +13,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _node_modules_lit_decorators__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../node_modules/lit/decorators */ "./node_modules/lit/decorators.js");
 /* harmony import */ var _style__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./style */ "./src/page/style.ts");
 /* harmony import */ var _userHistory_userHistory__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../userHistory/userHistory */ "./src/userHistory/userHistory.ts");
+/* harmony import */ var _sessionDetails_sessionDetails__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../sessionDetails/sessionDetails */ "./src/sessionDetails/sessionDetails.ts");
 var __decorate = (undefined && undefined.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -23,52 +24,80 @@ var __decorate = (undefined && undefined.__decorate) || function (decorators, ta
 
 
 
+
 let Page = class Page extends _node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.LitElement {
     constructor() {
         super(...arguments);
+        this._date = new Date().toDateString();
         this._currScreentime = [];
+        this._currRelMinute = 0;
+        this._selectedSessionIdx = -1;
+        this._currTabHistory = [];
+        // Interval ID for the interval set up in windows.setInterval that updates _currRelMinute
+        this._intervalId = 0;
     }
-    async firstUpdated() {
-        // const {currScreentime} = await chrome.storage.local.get(["currScreentime"]);
-        // this._currScreentime = currScreentime;
-        // FOR LOCALHOST TESTING
-        this._currScreentime = [
-            { end: 1732140108837, start: 1732140048837 },
-            { end: 1732140795572, start: 1732140729236 },
-            { end: 1732142662041, start: 1732142598833 },
-            { end: 1732143640562, start: 1732143580562 },
-            { end: 1732150249553, start: 1732150128921 },
-            { end: 1732150350664, start: 1732150290664 },
-            { end: 1732150498613, start: 1732150374938 },
-            { end: 1732152229068, start: 1732152165990 },
-            { end: 1732152330368, start: 1732152259268 },
-            { end: 1732152513593, start: 1732152336762 },
-            { end: 1732154222319, start: 1732154075215 },
-            { end: 1732154707749, start: 1732154638331 },
-            { end: 1732154791390, start: 1732154726640 },
-            { end: 1732154878571, start: 1732154818571 },
-            { end: 1732155412763, start: 1732155269003 },
-            { end: 1732155600959, start: 1732155494096 },
-            { end: 1732155807829, start: 1732155686541 },
-            { end: 1732156001651, start: 1732155899047 },
-            { end: 1732156172281, start: 1732156112281 },
-            { end: 1732156617765, start: 1732156296749 },
-            { end: 1732156739528, start: 1732156640000 },
-            { end: 1732156885970, start: 1732156761658 },
-            { end: 1732156973612, start: 1732156909474 }
-        ];
+    /**
+     * LIFECYCLE METHODS
+     */
+    async connectedCallback() {
+        super.connectedCallback();
+        // Initialize the states
+        this._updateMinutesIntoDay();
+        this._intervalId = window.setInterval(() => this._updateMinutesIntoDay(), 1000 * 60);
+        if (window.location.hostname !== "localhost") {
+            const { currScreentime, currTabHistory } = await chrome.storage.local.get(["currScreentime", "currTabHistory"]);
+            this._currScreentime = currScreentime;
+            this._currTabHistory = currTabHistory;
+        }
+        else {
+            // Localhost testing
+            this._currScreentime = [
+                { end: 1732782393918, start: 1732780868558 }
+            ];
+        }
+    }
+    disconnectedCallback() {
+        super.disconnectedCallback();
+        if (this._intervalId) {
+            window.clearInterval(this._intervalId);
+        }
+    }
+    /*
+     * EVENT HANDLERS
+     */
+    _onSessionSelected(event) {
+        event.stopPropagation();
+        const idx = event.detail.idx;
+        this._selectedSessionIdx = idx;
     }
     /*
      * HELPER FUNCTIONS
      */
+    _updateMinutesIntoDay() {
+        const now = new Date();
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+        this._currRelMinute = (now.getTime() - startOfDay.getTime()) / 1000 / 60;
+    }
     render() {
         return (0,_node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.html) `
             <div id='mainbody'>
                 <div class='left-half'>
-                    <lit-user-history .activities=${this._currScreentime}></lit-user-history>
+                    <lit-user-history 
+                        .sessions=${this._currScreentime}
+                        date=${this._date}
+                        currRelMinute=${this._currRelMinute}
+                        @session-selected=${this._onSessionSelected}
+                    ></lit-user-history>
                 </div>
                 <div class='right-half'>
-                    <lit-session-details class='right-item'></lit-session-details>
+                    <lit-session-details 
+                        class='right-item'
+                        date=${this._date}
+                        .sessions=${this._currScreentime}
+                        selectedSessionIdx=${this._selectedSessionIdx}
+                        .tabHistory=${this._currTabHistory}
+                    ></lit-session-details>
                     <lit-timechart class='right-item'></lit-timechart>
                 </div>
             </div>
@@ -78,7 +107,19 @@ let Page = class Page extends _node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.Lit
 Page.styles = _style__WEBPACK_IMPORTED_MODULE_2__.styles;
 __decorate([
     (0,_node_modules_lit_decorators__WEBPACK_IMPORTED_MODULE_1__.state)()
+], Page.prototype, "_date", void 0);
+__decorate([
+    (0,_node_modules_lit_decorators__WEBPACK_IMPORTED_MODULE_1__.state)()
 ], Page.prototype, "_currScreentime", void 0);
+__decorate([
+    (0,_node_modules_lit_decorators__WEBPACK_IMPORTED_MODULE_1__.state)()
+], Page.prototype, "_currRelMinute", void 0);
+__decorate([
+    (0,_node_modules_lit_decorators__WEBPACK_IMPORTED_MODULE_1__.state)()
+], Page.prototype, "_selectedSessionIdx", void 0);
+__decorate([
+    (0,_node_modules_lit_decorators__WEBPACK_IMPORTED_MODULE_1__.state)()
+], Page.prototype, "_currTabHistory", void 0);
 Page = __decorate([
     (0,_node_modules_lit_decorators__WEBPACK_IMPORTED_MODULE_1__.customElement)('lit-page')
 ], Page);
@@ -136,6 +177,534 @@ const styles = (0,lit__WEBPACK_IMPORTED_MODULE_0__.css) `
 
 /***/ }),
 
+/***/ "./src/sessionDetails/constants.ts":
+/*!*****************************************!*\
+  !*** ./src/sessionDetails/constants.ts ***!
+  \*****************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   hourToVh: () => (/* binding */ hourToVh),
+/* harmony export */   timeslotsPerHour: () => (/* binding */ timeslotsPerHour)
+/* harmony export */ });
+// Every 100vh represents 12
+const hourToVh = 100 / 1;
+// Number of timeslots per hour
+const timeslotsPerHour = 10;
+
+
+/***/ }),
+
+/***/ "./src/sessionDetails/sessionDetails.ts":
+/*!**********************************************!*\
+  !*** ./src/sessionDetails/sessionDetails.ts ***!
+  \**********************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var lit__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! lit */ "./node_modules/lit/index.js");
+/* harmony import */ var lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! lit/decorators.js */ "./node_modules/lit/decorators.js");
+/* harmony import */ var _style__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./style */ "./src/sessionDetails/style.ts");
+/* harmony import */ var _constants__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./constants */ "./src/sessionDetails/constants.ts");
+/* harmony import */ var _tabSession_tabSession__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./tabSession/tabSession */ "./src/sessionDetails/tabSession/tabSession.ts");
+var __decorate = (undefined && undefined.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+
+
+
+
+
+let SessionDetails = class SessionDetails extends lit__WEBPACK_IMPORTED_MODULE_0__.LitElement {
+    constructor() {
+        super(...arguments);
+        this.date = "";
+        this.sessions = [];
+        this.selectedSessionIdx = -1;
+        this.tabHistory = [];
+    }
+    /*
+     * HELPER FUNCTIONS
+     */
+    _getCurrTabs() {
+        const session = this.sessions[this.selectedSessionIdx];
+        const currTabTimestamps = this.tabHistory.filter(tab => (tab.timestamp >= session.start && tab.timestamp <= session.end));
+        // tabSessions are tabs with start and end dates
+        const tabSessions = [];
+        for (let idx = 0; idx < currTabTimestamps.length; idx++) {
+            // The start of the next tab, if it's the last one, the end of this activity session
+            const endTimestamp = idx !== currTabTimestamps.length - 1 ?
+                currTabTimestamps[idx + 1].timestamp :
+                this.sessions[this.selectedSessionIdx].end;
+            tabSessions.push({
+                url: currTabTimestamps[idx].url,
+                start: currTabTimestamps[idx].timestamp,
+                end: endTimestamp
+            });
+        }
+        return tabSessions;
+    }
+    _getTimestampText(hour, part) {
+        let ans = "";
+        ans += `${hour <= 12 ? hour : hour - 12}`;
+        if (part !== 0) {
+            ans += `:${part * Math.floor(60 / _constants__WEBPACK_IMPORTED_MODULE_3__.timeslotsPerHour)}`;
+        }
+        ans += hour < 12 ? " AM" : " PM";
+        return ans;
+    }
+    // Given Epoch timestamp, return how many ms into the current day this timestamp is
+    _getRelMs(timestamp) {
+        const dayStartEpoch = (new Date(this.date)).getTime();
+        return timestamp - dayStartEpoch;
+    }
+    // Generate the HTML for the timeline container
+    _createTimelineHtml() {
+        try {
+            const session = this.sessions[this.selectedSessionIdx];
+            const relStartEpoch = this._getRelMs(session.start);
+            const relEndEpoch = this._getRelMs(session.end);
+            const msPerHour = 1000 * 60 * 60;
+            const msPerSubhour = msPerHour / _constants__WEBPACK_IMPORTED_MODULE_3__.timeslotsPerHour;
+            const startHour = Math.floor(relStartEpoch / msPerHour);
+            const startSubhour = Math.floor((relStartEpoch % msPerHour) / msPerSubhour);
+            const endHour = Math.floor(relEndEpoch / msPerHour);
+            const endSubhour = Math.floor((relEndEpoch % msPerHour) / msPerSubhour);
+            // Create the list of timeslots
+            let timeslots = [];
+            let currHour = startHour;
+            let currSubHour = startSubhour;
+            while (currHour < endHour || (currHour === endHour && currSubHour <= endSubhour)) {
+                timeslots.push({ hour: currHour, part: currSubHour });
+                currSubHour++;
+                if (currSubHour === _constants__WEBPACK_IMPORTED_MODULE_3__.timeslotsPerHour) {
+                    currSubHour = 0;
+                    currHour++;
+                }
+            }
+            // For the last timestamp at the bottom of the calendar
+            let lastHour = endHour + Math.floor((endSubhour + 1) / _constants__WEBPACK_IMPORTED_MODULE_3__.timeslotsPerHour);
+            let lastSubhour = (endSubhour + 1) % _constants__WEBPACK_IMPORTED_MODULE_3__.timeslotsPerHour;
+            return (0,lit__WEBPACK_IMPORTED_MODULE_0__.html) `
+                <div class="sesh-timeline-scrolling-container">
+                    <div class="sesh-timeline">
+                        <!-- The Timeslot template -->
+                        ${timeslots.map((timeslot) => (0,lit__WEBPACK_IMPORTED_MODULE_0__.html) `
+                            <div class="timeslot ${timeslot.part === 0 ? 'hour-start' : ''} ${timeslot.part === _constants__WEBPACK_IMPORTED_MODULE_3__.timeslotsPerHour - 1 ? 'hour-end' : ''}">
+                                <div class="timestamp ${timeslot.part === 0 ? 'primary' : 'secondary'}}">
+                                    ${this._getTimestampText(timeslot.hour, timeslot.part)}
+                                </div>
+                            </div>
+                        `)}
+                        <!-- The extra timestamp at the bottom -->
+                        <div>
+                            <div class="timestamp ${lastSubhour === 0 ? 'primary' : 'secondary'}">
+                                ${this._getTimestampText(lastHour, lastSubhour)}
+                            </div>
+                        </div>
+
+                        <!-- The actual tab sessions -->
+                        ${this._getCurrTabs().map((tab) => (0,lit__WEBPACK_IMPORTED_MODULE_0__.html) `
+                            <lit-tab-session
+                                url=${tab.url}
+                                relStart=${this._getRelMs(tab.start)}
+                                relEnd=${this._getRelMs(tab.end)}
+                            ></lit-tab-session>
+                        `)}
+                    </div>
+
+                </div>
+            `;
+        }
+        catch (e) {
+            return (0,lit__WEBPACK_IMPORTED_MODULE_0__.html) ``;
+        }
+    }
+    render() {
+        return (0,lit__WEBPACK_IMPORTED_MODULE_0__.html) `
+            <div class="mainbody">
+                <div class="header">
+                    
+                </div>
+                ${this._createTimelineHtml()}
+            </div>    
+        `;
+    }
+};
+SessionDetails.styles = _style__WEBPACK_IMPORTED_MODULE_2__.styles;
+__decorate([
+    (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.property)({ type: String, reflect: true })
+], SessionDetails.prototype, "date", void 0);
+__decorate([
+    (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.property)({ type: Array, reflect: true })
+], SessionDetails.prototype, "sessions", void 0);
+__decorate([
+    (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.property)({ type: Number, reflect: true })
+], SessionDetails.prototype, "selectedSessionIdx", void 0);
+__decorate([
+    (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.property)({ type: Array, reflect: true })
+], SessionDetails.prototype, "tabHistory", void 0);
+SessionDetails = __decorate([
+    (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.customElement)('lit-session-details')
+], SessionDetails);
+
+
+/***/ }),
+
+/***/ "./src/sessionDetails/style.ts":
+/*!*************************************!*\
+  !*** ./src/sessionDetails/style.ts ***!
+  \*************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   styles: () => (/* binding */ styles)
+/* harmony export */ });
+/* harmony import */ var lit__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! lit */ "./node_modules/lit/index.js");
+/* harmony import */ var _constants__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./constants */ "./src/sessionDetails/constants.ts");
+
+
+const styles = (0,lit__WEBPACK_IMPORTED_MODULE_0__.css) `
+:host {
+    display: block;
+    height: 100%;
+    width: 100%;
+}
+
+.mainbody {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    box-sizing: border-box;
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+.header {
+    display: flex;
+    justify-content: center;
+    padding: 5px;
+    font-size: 1.25em;
+    font-weight: bold;
+    height: 5%;
+}
+
+.sesh-timeline-scrolling-container {
+    box-sizing: border-box;
+    width: 100%;
+    height: 95%;
+    overflow-y: scroll;
+    padding: 15px;
+}
+
+.sesh-timeline {
+    box-sizing: border-box;
+    margin: 15px;
+    width: 80%;
+    margin-left: 15%;
+    position: relative;
+}
+
+.timeslot {
+    box-sizing: border-box;
+    border: 1px rgb(220, 220, 220) solid;
+    border-left: 1px solid black;
+    border-right: 1px solid black;
+    height: ${1 / _constants__WEBPACK_IMPORTED_MODULE_1__.timeslotsPerHour * _constants__WEBPACK_IMPORTED_MODULE_1__.hourToVh}vh;
+}
+
+.timeslot.hour-start {
+    border-top: 1px solid black;
+}
+
+.timeslot.hour-end {
+    border-bottom: 1px solid black;
+}
+
+.timestamp {
+    width: fit-content;
+    transform: translate(calc(-100% - 10px), -50%);
+}
+
+.timestamp.primary {
+    text-decoration-color: black;
+}
+
+.timestamp.secondary {
+    text-decoration-color: gray;
+}
+
+`;
+
+
+/***/ }),
+
+/***/ "./src/sessionDetails/tabSession/style.ts":
+/*!************************************************!*\
+  !*** ./src/sessionDetails/tabSession/style.ts ***!
+  \************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   styles: () => (/* binding */ styles)
+/* harmony export */ });
+/* harmony import */ var lit__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! lit */ "./node_modules/lit/index.js");
+
+const styles = (0,lit__WEBPACK_IMPORTED_MODULE_0__.css) `
+
+.tab-session {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    position: absolute;
+    background-color: yellow;
+}
+
+`;
+
+
+/***/ }),
+
+/***/ "./src/sessionDetails/tabSession/tabSession.ts":
+/*!*****************************************************!*\
+  !*** ./src/sessionDetails/tabSession/tabSession.ts ***!
+  \*****************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var lit__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! lit */ "./node_modules/lit/index.js");
+/* harmony import */ var lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! lit/decorators.js */ "./node_modules/lit/decorators.js");
+/* harmony import */ var _style__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./style */ "./src/sessionDetails/tabSession/style.ts");
+/* harmony import */ var _constants__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../constants */ "./src/sessionDetails/constants.ts");
+var __decorate = (undefined && undefined.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+
+
+
+
+let TabSession = class TabSession extends lit__WEBPACK_IMPORTED_MODULE_0__.LitElement {
+    constructor() {
+        super(...arguments);
+        this.url = '';
+        this.relStart = 0;
+        this.relEnd = 0;
+    }
+    /*
+     * HELPER FUNCTIONS
+     */
+    _msToVh(ms) {
+        return _constants__WEBPACK_IMPORTED_MODULE_3__.hourToVh * ms / 1000 / 60 / 60;
+    }
+    render() {
+        // To add the positioning info
+        const inlineStyle = `
+            top: ${this._msToVh(this.relStart)}vh;
+            height: ${this._msToVh(this.relEnd - this.relStart)}vh;
+        `;
+        console.log(`TAB ${this.url} has a duration of ${(this.relEnd - this.relStart) / 1000 / 60} minutes`);
+        return (0,lit__WEBPACK_IMPORTED_MODULE_0__.html) `
+            <div
+                class="tab-session"
+                style=${inlineStyle}
+            >
+                <div
+                 class="url-text"
+                >
+                    ${this.url}
+                </div>
+            </div>
+        `;
+    }
+};
+TabSession.styles = _style__WEBPACK_IMPORTED_MODULE_2__.styles;
+__decorate([
+    (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.property)({ type: String, reflect: true })
+], TabSession.prototype, "url", void 0);
+__decorate([
+    (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.property)({ type: Number, reflect: true })
+], TabSession.prototype, "relStart", void 0);
+__decorate([
+    (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.property)({ type: Number, reflect: true })
+], TabSession.prototype, "relEnd", void 0);
+TabSession = __decorate([
+    (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.customElement)('lit-tab-session')
+], TabSession);
+
+
+/***/ }),
+
+/***/ "./src/userHistory/constants.ts":
+/*!**************************************!*\
+  !*** ./src/userHistory/constants.ts ***!
+  \**************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   hourToVh: () => (/* binding */ hourToVh),
+/* harmony export */   timeslotsPerHour: () => (/* binding */ timeslotsPerHour)
+/* harmony export */ });
+// Every 100vh represents 12
+const hourToVh = 100 / 12;
+// Number of timeslots per hour
+const timeslotsPerHour = 2;
+
+
+/***/ }),
+
+/***/ "./src/userHistory/session/session.ts":
+/*!********************************************!*\
+  !*** ./src/userHistory/session/session.ts ***!
+  \********************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   Session: () => (/* binding */ Session)
+/* harmony export */ });
+/* harmony import */ var lit__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! lit */ "./node_modules/lit/index.js");
+/* harmony import */ var lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! lit/decorators.js */ "./node_modules/lit/decorators.js");
+/* harmony import */ var _style__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./style */ "./src/userHistory/session/style.ts");
+/* harmony import */ var _constants__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../constants */ "./src/userHistory/constants.ts");
+var __decorate = (undefined && undefined.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+
+
+
+
+let Session = class Session extends lit__WEBPACK_IMPORTED_MODULE_0__.LitElement {
+    constructor() {
+        super(...arguments);
+        this.start = 0;
+        this.end = 0;
+        this.idx = 0;
+        this.selected = false;
+    }
+    /*
+     * EVENT LISTENERS
+     */
+    _onMouseEnter(event) {
+        event.stopPropagation();
+        const hoveredEvent = new CustomEvent('session-hovered', {
+            detail: {
+                idx: this.idx
+            },
+            bubbles: true,
+            composed: true
+        });
+        this.dispatchEvent(hoveredEvent);
+    }
+    _onClick(event) {
+        event.stopPropagation();
+        const clickedEvent = new CustomEvent('session-clicked', {
+            detail: {
+                idx: this.idx
+            },
+            bubbles: true,
+            composed: true
+        });
+        this.dispatchEvent(clickedEvent);
+    }
+    /*
+     * HELPER FUNCTIONS
+     */
+    _msToVh(ms) {
+        return _constants__WEBPACK_IMPORTED_MODULE_3__.hourToVh * ms / 1000 / 60 / 60;
+    }
+    render() {
+        // To add the positioning info
+        const inlineStyle = `
+            top: ${this._msToVh(this.start)}vh;
+            height: ${this._msToVh(this.end - this.start)}vh;
+        `;
+        return (0,lit__WEBPACK_IMPORTED_MODULE_0__.html) `
+            <div 
+                class="session ${this.selected ? "selected" : ""}" 
+                style=${inlineStyle}
+                @mouseenter=${this._onMouseEnter}
+                @click=${this._onClick}
+            >
+
+            </div>
+        `;
+    }
+};
+Session.styles = _style__WEBPACK_IMPORTED_MODULE_2__.styles;
+__decorate([
+    (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.property)({ type: Number, reflect: true })
+], Session.prototype, "start", void 0);
+__decorate([
+    (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.property)({ type: Number, reflect: true })
+], Session.prototype, "end", void 0);
+__decorate([
+    (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.property)({ type: Number, reflect: true })
+], Session.prototype, "idx", void 0);
+__decorate([
+    (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.property)({ type: Boolean, reflect: true })
+], Session.prototype, "selected", void 0);
+Session = __decorate([
+    (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.customElement)('lit-user-history-session')
+], Session);
+
+
+
+/***/ }),
+
+/***/ "./src/userHistory/session/style.ts":
+/*!******************************************!*\
+  !*** ./src/userHistory/session/style.ts ***!
+  \******************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   styles: () => (/* binding */ styles)
+/* harmony export */ });
+/* harmony import */ var lit__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! lit */ "./node_modules/lit/index.js");
+
+const styles = (0,lit__WEBPACK_IMPORTED_MODULE_0__.css) `
+
+.session {
+    --trans-time: 0.3s;
+
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    position: absolute;
+    background-color: orange;
+    transition: background-color var(--trans-time), box-shadow var(--trans-time);
+    cursor: pointer;
+
+}
+
+.session:hover {
+    background-color: darkorange;
+}
+
+.session.selected {
+    box-shadow: 4px 2px 4px rgba(0, 0, 0, 0.3);
+    background-color: darkorange;
+}
+    
+`;
+
+
+/***/ }),
+
 /***/ "./src/userHistory/style.ts":
 /*!**********************************!*\
   !*** ./src/userHistory/style.ts ***!
@@ -147,9 +716,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   styles: () => (/* binding */ styles)
 /* harmony export */ });
 /* harmony import */ var lit__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! lit */ "./node_modules/lit/index.js");
+/* harmony import */ var _constants__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./constants */ "./src/userHistory/constants.ts");
 
-// 100vh = 12 hours
-const slotHeight = 100 / (24 * 4);
+
 const styles = (0,lit__WEBPACK_IMPORTED_MODULE_0__.css) `
 
 :host {
@@ -162,6 +731,9 @@ const styles = (0,lit__WEBPACK_IMPORTED_MODULE_0__.css) `
     width: 100%;
     height: 100%;
     position: relative;
+    box-sizing: border-box;
+    padding-top: 10px;
+    padding-bottom: 10px;
 }
 
 .date {
@@ -183,17 +755,20 @@ const styles = (0,lit__WEBPACK_IMPORTED_MODULE_0__.css) `
 }
 
 .timeline {
+    box-sizing: border-box;
     margin: 15px;
     width: 80%;
+    height: ${24 * _constants__WEBPACK_IMPORTED_MODULE_1__.hourToVh}vh;
     margin-left: 10%;
     position: relative;
 }
 
 .timeslot {
-    border: 1px rgb(200, 200, 200) solid;
+    box-sizing: border-box;
+    border: 1px rgb(220, 220, 220) solid;
     border-left: 1px solid black;
     border-right: 1px solid black;
-    height: 20px;
+    height: ${1 / _constants__WEBPACK_IMPORTED_MODULE_1__.timeslotsPerHour * _constants__WEBPACK_IMPORTED_MODULE_1__.hourToVh}vh;
 }
 
 .timeslot.hour-start {
@@ -206,14 +781,27 @@ const styles = (0,lit__WEBPACK_IMPORTED_MODULE_0__.css) `
 
 .timestamp {
     width: fit-content;
-    transform: translate(-120%, -50%);
+    transform: translate(calc(-100% - 10px), -50%);
 }
 
-.activity {
+.present-bar {
+    --bar-color: blue;
+
     box-sizing: border-box;
     width: 100%;
     position: absolute;
-    background-color: red;
+    background-color: var(--bar-color);
+    height: 0.30vh;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.present-bar-arrow {
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+    border-right: 10px solid var(--bar-color);
+    transform: translateX(80%);
 }
 
 
@@ -232,6 +820,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var lit__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! lit */ "./node_modules/lit/index.js");
 /* harmony import */ var lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! lit/decorators.js */ "./node_modules/lit/decorators.js");
 /* harmony import */ var _style__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./style */ "./src/userHistory/style.ts");
+/* harmony import */ var _constants__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./constants */ "./src/userHistory/constants.ts");
+/* harmony import */ var _session_session__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./session/session */ "./src/userHistory/session/session.ts");
 var __decorate = (undefined && undefined.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -241,11 +831,36 @@ var __decorate = (undefined && undefined.__decorate) || function (decorators, ta
 
 
 
+
+
 let UserHistory = class UserHistory extends lit__WEBPACK_IMPORTED_MODULE_0__.LitElement {
     constructor() {
         super(...arguments);
-        this.date = new Date().toDateString();
-        this.activities = [];
+        this.date = "";
+        this.sessions = [];
+        this.currRelMinute = 0;
+        this._selectedSessionIdx = -1;
+    }
+    /*
+     * EVENT HANDLERS
+     */
+    _onSessionClick(event) {
+        event.stopPropagation();
+        const clickedIdx = event.detail.idx;
+        if (this._selectedSessionIdx === clickedIdx) {
+            this._selectedSessionIdx = -1;
+        }
+        else {
+            this._selectedSessionIdx = clickedIdx;
+        }
+        const selectedEvent = new CustomEvent('session-selected', {
+            detail: {
+                idx: this._selectedSessionIdx
+            },
+            bubbles: true,
+            composed: true
+        });
+        this.dispatchEvent(selectedEvent);
     }
     /*
      * HELPER FUNCTIONS
@@ -262,23 +877,22 @@ let UserHistory = class UserHistory extends lit__WEBPACK_IMPORTED_MODULE_0__.Lit
         }
     }
     // Converts an ActivitySession to HTML
-    _activityMapHTML(activity) {
+    _sessionMapHTML(session, idx) {
         try {
             const dayStartEpoch = (new Date(this.date)).getTime();
-            const startRelEpoch = activity.start - dayStartEpoch;
-            const endRelEpoch = activity.end - dayStartEpoch;
-            console.log("duration in milliseconds: ", endRelEpoch - startRelEpoch);
+            const startRelEpoch = session.start - dayStartEpoch;
+            const endRelEpoch = session.end - dayStartEpoch;
             console.log("duration in minutes: ", (endRelEpoch - startRelEpoch) / 1000 / 60);
             console.log("started in hours: ", startRelEpoch / 1000 / 60 / 60);
-            // 100vh = 12 hours
-            const msToVh = (ms) => ms / 1000 / 60 / 60 * 100 / 12;
-            const inlineStyle = `
-                top: ${msToVh(startRelEpoch)}vh;
-                height: ${msToVh(endRelEpoch - startRelEpoch)}vh;
-            `;
             return (0,lit__WEBPACK_IMPORTED_MODULE_0__.html) `
-                <div class="activity" style=${inlineStyle}>
-                </div>
+                <lit-user-history-session
+                    start=${startRelEpoch}
+                    end=${endRelEpoch}
+                    idx=${idx}
+                    ?selected=${idx === this._selectedSessionIdx}
+                >
+
+                </lit-user-history-session>
             `;
         }
         catch (e) {
@@ -286,22 +900,34 @@ let UserHistory = class UserHistory extends lit__WEBPACK_IMPORTED_MODULE_0__.Lit
             return (0,lit__WEBPACK_IMPORTED_MODULE_0__.html) ``;
         }
     }
+    _createPresentBarHtml() {
+        const minToVh = (min) => min / 60 * _constants__WEBPACK_IMPORTED_MODULE_3__.hourToVh;
+        const inlineStyle = `top: ${minToVh(this.currRelMinute)}vh;`;
+        return (0,lit__WEBPACK_IMPORTED_MODULE_0__.html) `
+            <div class="present-bar" style=${inlineStyle}>
+                <div class="present-bar-arrow"></div>
+            </div>
+        `;
+    }
     render() {
         let timeslots = [];
         for (let i = 0; i < 24; i++) {
-            for (let j = 0; j < 4; j++) {
-                timeslots.push({ hour: i, quarterHour: j });
+            for (let j = 0; j < _constants__WEBPACK_IMPORTED_MODULE_3__.timeslotsPerHour; j++) {
+                timeslots.push({ hour: i, part: j });
             }
         }
         return (0,lit__WEBPACK_IMPORTED_MODULE_0__.html) `
             <div class="mainbody">
                 <div class="date">${this.date}</div>
                     <div class="timeline-scrolling-container">
-                        <div class="timeline">
+                        <div class="timeline"
+                            @session-clicked=${this._onSessionClick}
+                        >
+                            <!-- The Timeslot templates -->
                             ${timeslots.map((timeslot) => {
             return (0,lit__WEBPACK_IMPORTED_MODULE_0__.html) `
-                                    <div class="timeslot ${timeslot.quarterHour === 0 ? 'hour-start' : ''} ${timeslot.quarterHour === 3 ? 'hour-end' : ''}">
-                                        ${(timeslot.quarterHour === 0) ?
+                                    <div class="timeslot ${timeslot.part === 0 ? 'hour-start' : ''} ${timeslot.part === _constants__WEBPACK_IMPORTED_MODULE_3__.timeslotsPerHour - 1 ? 'hour-end' : ''}">
+                                        ${(timeslot.part === 0) ?
                 (0,lit__WEBPACK_IMPORTED_MODULE_0__.html) `<div class="timestamp">
                                                     ${this._getTimestampText(timeslot.hour)}
                                                 </div>`
@@ -310,7 +936,11 @@ let UserHistory = class UserHistory extends lit__WEBPACK_IMPORTED_MODULE_0__.Lit
                                 `;
         })}
 
-                            ${this.activities.map((activity) => this._activityMapHTML(activity))}
+                            <!-- The actual user activity sessions -->
+                            ${this.sessions.map((session, idx) => this._sessionMapHTML(session, idx))}
+
+                            <!-- The present timestamp bar -->
+                            ${this._createPresentBarHtml()}
                         </div>
                     </div>
             </div>
@@ -323,7 +953,13 @@ __decorate([
 ], UserHistory.prototype, "date", void 0);
 __decorate([
     (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.property)({ type: Array, reflect: true })
-], UserHistory.prototype, "activities", void 0);
+], UserHistory.prototype, "sessions", void 0);
+__decorate([
+    (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.property)({ type: Number, reflect: true })
+], UserHistory.prototype, "currRelMinute", void 0);
+__decorate([
+    (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.state)()
+], UserHistory.prototype, "_selectedSessionIdx", void 0);
 UserHistory = __decorate([
     (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.customElement)('lit-user-history')
 ], UserHistory);
@@ -4274,20 +4910,22 @@ const startOfDay = new Date();
 startOfDay.setHours(0, 0, 0, 0);
 const startOfDayTimestamp = startOfDay.getTime();
 console.log("startOfDayTimestamp: " + startOfDayTimestamp);
-chrome.history.search({
-    text: '',
-    startTime: startOfDayTimestamp,
-    maxResults: 1000000 // basically no upper limit
-}, function (historyItems) {
-    console.log("in search");
-    console.log(historyItems);
-});
-// FOR TESTING
-(async function () {
-    console.log(chrome);
-    console.log("currScreentime: ", await chrome.storage.local.get(null));
-    console.log("lastUserEvent: ", await chrome.storage.local.get("lastUserEvent"));
-})();
+// Detect if this is localhost
+if (window.location.hostname !== "localhost") {
+    // chrome.history.search({
+    //     text: '',
+    //     startTime: startOfDayTimestamp,
+    //     maxResults: 1000000 // basically no upper limit
+    // }, function(historyItems) {
+    //     console.log("in search")
+    //     console.log(historyItems);
+    // });
+    // FOR TESTING
+    (async function () {
+        console.log(chrome);
+        console.log("chrome.storage.local data: ", await chrome.storage.local.get(null));
+    })();
+}
 // Add the single Lit component that is the entire page
 document.querySelector('body').innerHTML = '<lit-page></lit-page>';
 // add styling tags on body

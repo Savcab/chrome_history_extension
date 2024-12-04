@@ -55,6 +55,7 @@ export class Session extends LitElement {
     }
 
     render() {
+        // To add the positioning info
         const inlineStyle = `
             top: ${this._msToVh(this.start)}vh;
             height: ${this._msToVh(this.end - this.start)}vh;

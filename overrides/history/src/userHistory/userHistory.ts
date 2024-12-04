@@ -1,15 +1,10 @@
 import { LitElement, html, css, CSSResult, CSSResultGroup, TemplateResult } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import {styles} from './style'
-import { ActivitySession } from '../types';
+import { ActivitySession, TimeSlot } from '../types';
 import { styleMap } from 'lit/directives/style-map';
 import { hourToVh, timeslotsPerHour } from './constants';
 import './session/session';
-
-type TimeSlot = {
-    hour: number;
-    part: number;
-}
 
 @customElement('lit-user-history')
 class UserHistory extends LitElement {
@@ -43,7 +38,7 @@ class UserHistory extends LitElement {
 
         const selectedEvent = new CustomEvent('session-selected', {
             detail: {
-                selectedIdx: this._selectedSessionIdx
+                idx: this._selectedSessionIdx
             },
             bubbles: true,
             composed: true
@@ -130,9 +125,7 @@ class UserHistory extends LitElement {
                             })}
 
                             <!-- The actual user activity sessions -->
-                            <!-- <div @click=${this._onSessionClick}> -->
-                                ${this.sessions.map((session, idx) => this._sessionMapHTML(session, idx))}
-                            <!-- </div> -->
+                            ${this.sessions.map((session, idx) => this._sessionMapHTML(session, idx))}
 
                             <!-- The present timestamp bar -->
                             ${this._createPresentBarHtml()}

@@ -7,21 +7,20 @@ console.log("startOfDayTimestamp: " + startOfDayTimestamp);
 
 // Detect if this is localhost
 if (window.location.hostname !== "localhost") {
-    chrome.history.search({
-        text: '',
-        startTime: startOfDayTimestamp,
-        maxResults: 1000000 // basically no upper limit
-    }, function(historyItems) {
-        console.log("in search")
-        console.log(historyItems);
-    });
+    // chrome.history.search({
+    //     text: '',
+    //     startTime: startOfDayTimestamp,
+    //     maxResults: 1000000 // basically no upper limit
+    // }, function(historyItems) {
+    //     console.log("in search")
+    //     console.log(historyItems);
+    // });
     
     
     // FOR TESTING
     (async function(){
         console.log(chrome);
-        console.log("currScreentime: ", await chrome.storage.local.get(null));
-        console.log("lastUserEvent: ", await chrome.storage.local.get("lastUserEvent"));
+        console.log("chrome.storage.local data: ", await chrome.storage.local.get(null));
     })();
 }
 

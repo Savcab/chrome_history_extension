@@ -2,7 +2,6 @@ import { css } from "lit";
 import { hourToVh, timeslotsPerHour } from "./constants";
 
 export const styles = css`
-
 :host {
     display: block;
     height: 100%;
@@ -18,8 +17,7 @@ export const styles = css`
     padding-bottom: 10px;
 }
 
-.date {
-    box-sizing: border-box;
+.header {
     display: flex;
     justify-content: center;
     padding: 5px;
@@ -28,7 +26,7 @@ export const styles = css`
     height: 5%;
 }
 
-.timeline-scrolling-container {
+.sesh-timeline-scrolling-container {
     box-sizing: border-box;
     width: 100%;
     height: 95%;
@@ -36,12 +34,11 @@ export const styles = css`
     padding: 15px;
 }
 
-.timeline {
+.sesh-timeline {
     box-sizing: border-box;
     margin: 15px;
     width: 80%;
-    height: ${24 * hourToVh}vh;
-    margin-left: 10%;
+    margin-left: 15%;
     position: relative;
 }
 
@@ -66,25 +63,12 @@ export const styles = css`
     transform: translate(calc(-100% - 10px), -50%);
 }
 
-.present-bar {
-    --bar-color: blue;
-
-    box-sizing: border-box;
-    width: 100%;
-    position: absolute;
-    background-color: var(--bar-color);
-    height: 0.30vh;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
+.timestamp.primary {
+    text-decoration-color: black;
 }
 
-.present-bar-arrow {
-    border-top: 5px solid transparent;
-    border-bottom: 5px solid transparent;
-    border-right: 10px solid var(--bar-color);
-    transform: translateX(80%);
+.timestamp.secondary {
+    text-decoration-color: gray;
 }
-
 
 `;
