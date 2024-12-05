@@ -20,6 +20,12 @@ class UserHistory extends LitElement {
     @property({type: Number, reflect: true})
         currRelMinute: number = 0;
 
+    @property({type: Boolean, reflect: true})
+        active: boolean = false;
+
+    @property({type: Number, reflect: true})
+        currSeshStart: number = 0;
+
     @state()
         _selectedSessionIdx = -1;
 
@@ -103,6 +109,15 @@ class UserHistory extends LitElement {
             }
         }
 
+        // The actually displayed sessions (includes current session if exists)
+        const displayedSessions = this.sessions;
+        if (this.active) {
+            displayedSessions.push({
+                start: this.currSeshStart,
+                end: this.currRelMinute * 60 * 1000 + (new Date(this.date)).getTime()
+            });
+        }
+
 
         return html`
             <div class="mainbody">
@@ -125,7 +140,7 @@ class UserHistory extends LitElement {
                             })}
 
                             <!-- The actual user activity sessions -->
-                            ${this.sessions.map((session, idx) => this._sessionMapHTML(session, idx))}
+                            ${displayedSessions.map((session, idx) => this._sessionMapHTML(session, idx))}
 
                             <!-- The present timestamp bar -->
                             ${this._createPresentBarHtml()}

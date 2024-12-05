@@ -33,6 +33,8 @@ let Page = class Page extends _node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.Lit
         this._currRelMinute = 0;
         this._selectedSessionIdx = -1;
         this._currTabHistory = [];
+        this._active = false;
+        this._currSeshStart = 0;
         // Interval ID for the interval set up in windows.setInterval that updates _currRelMinute
         this._intervalId = 0;
     }
@@ -43,11 +45,16 @@ let Page = class Page extends _node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.Lit
         super.connectedCallback();
         // Initialize the states
         this._updateMinutesIntoDay();
-        this._intervalId = window.setInterval(() => this._updateMinutesIntoDay(), 1000 * 60);
+        this._intervalId = window.setInterval(() => this._upateStatesMinutely(), 1000 * 60);
         if (window.location.hostname !== "localhost") {
-            const { currScreentime, currTabHistory } = await chrome.storage.local.get(["currScreentime", "currTabHistory"]);
+            const { currScreentime, currTabHistory, active, currSesh, currDate } = await chrome.storage.local.get(["currScreentime", "currTabHistory", "active", "currSesh", "currDate"]);
             this._currScreentime = currScreentime;
             this._currTabHistory = currTabHistory;
+            this._active = active;
+            this._date = currDate;
+            if (active) {
+                this._currSeshStart = currSesh.start;
+            }
         }
         else {
             // Localhost testing
@@ -79,6 +86,17 @@ let Page = class Page extends _node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.Lit
         startOfDay.setHours(0, 0, 0, 0);
         this._currRelMinute = (now.getTime() - startOfDay.getTime()) / 1000 / 60;
     }
+    async _upateStatesMinutely() {
+        this._updateMinutesIntoDay();
+        const { active, currSesh } = await chrome.storage.local.get(["active", "currSesh"]);
+        this._active = active;
+        if (active) {
+            this._currSeshStart = currSesh.start;
+        }
+        else {
+            this._currSeshStart = 0;
+        }
+    }
     render() {
         return (0,_node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.html) `
             <div id='mainbody'>
@@ -87,6 +105,8 @@ let Page = class Page extends _node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.Lit
                         .sessions=${this._currScreentime}
                         date=${this._date}
                         currRelMinute=${this._currRelMinute}
+                        ?active=${this._active}
+                        currSeshStart=${this._currSeshStart}
                         @session-selected=${this._onSessionSelected}
                     ></lit-user-history>
                 </div>
@@ -120,6 +140,12 @@ __decorate([
 __decorate([
     (0,_node_modules_lit_decorators__WEBPACK_IMPORTED_MODULE_1__.state)()
 ], Page.prototype, "_currTabHistory", void 0);
+__decorate([
+    (0,_node_modules_lit_decorators__WEBPACK_IMPORTED_MODULE_1__.state)()
+], Page.prototype, "_active", void 0);
+__decorate([
+    (0,_node_modules_lit_decorators__WEBPACK_IMPORTED_MODULE_1__.state)()
+], Page.prototype, "_currSeshStart", void 0);
 Page = __decorate([
     (0,_node_modules_lit_decorators__WEBPACK_IMPORTED_MODULE_1__.customElement)('lit-page')
 ], Page);
@@ -839,6 +865,8 @@ let UserHistory = class UserHistory extends lit__WEBPACK_IMPORTED_MODULE_0__.Lit
         this.date = "";
         this.sessions = [];
         this.currRelMinute = 0;
+        this.active = false;
+        this.currSeshStart = 0;
         this._selectedSessionIdx = -1;
     }
     /*
@@ -916,6 +944,14 @@ let UserHistory = class UserHistory extends lit__WEBPACK_IMPORTED_MODULE_0__.Lit
                 timeslots.push({ hour: i, part: j });
             }
         }
+        // The actually displayed sessions (includes current session if exists)
+        const displayedSessions = this.sessions;
+        if (this.active) {
+            displayedSessions.push({
+                start: this.currSeshStart,
+                end: this.currRelMinute * 60 * 1000 + (new Date(this.date)).getTime()
+            });
+        }
         return (0,lit__WEBPACK_IMPORTED_MODULE_0__.html) `
             <div class="mainbody">
                 <div class="date">${this.date}</div>
@@ -937,7 +973,7 @@ let UserHistory = class UserHistory extends lit__WEBPACK_IMPORTED_MODULE_0__.Lit
         })}
 
                             <!-- The actual user activity sessions -->
-                            ${this.sessions.map((session, idx) => this._sessionMapHTML(session, idx))}
+                            ${displayedSessions.map((session, idx) => this._sessionMapHTML(session, idx))}
 
                             <!-- The present timestamp bar -->
                             ${this._createPresentBarHtml()}
@@ -957,6 +993,12 @@ __decorate([
 __decorate([
     (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.property)({ type: Number, reflect: true })
 ], UserHistory.prototype, "currRelMinute", void 0);
+__decorate([
+    (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.property)({ type: Boolean, reflect: true })
+], UserHistory.prototype, "active", void 0);
+__decorate([
+    (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.property)({ type: Number, reflect: true })
+], UserHistory.prototype, "currSeshStart", void 0);
 __decorate([
     (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.state)()
 ], UserHistory.prototype, "_selectedSessionIdx", void 0);

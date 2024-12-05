@@ -25,6 +25,12 @@ class Page extends LitElement {
     @state()
         _currTabHistory: TabTimestamp[] = [];
 
+    @state()
+        _active: boolean = false;
+
+    @state()
+        _currSeshStart: number = 0;
+
     // Interval ID for the interval set up in windows.setInterval that updates _currRelMinute
     private _intervalId: number = 0;
 
@@ -36,12 +42,17 @@ class Page extends LitElement {
         super.connectedCallback();
         // Initialize the states
         this._updateMinutesIntoDay();
-        this._intervalId = window.setInterval(() => this._updateMinutesIntoDay(), 1000 * 60);
+        this._intervalId = window.setInterval(() => this._upateStatesMinutely(), 1000 * 60);
         if (window.location.hostname !== "localhost") {
 
-            const {currScreentime, currTabHistory} = await chrome.storage.local.get(["currScreentime", "currTabHistory"]);
+            const {currScreentime, currTabHistory, active, currSesh, currDate} = await chrome.storage.local.get(["currScreentime", "currTabHistory", "active", "currSesh", "currDate"]);
             this._currScreentime = currScreentime;
             this._currTabHistory = currTabHistory;
+            this._active = active;
+            this._date = currDate;
+            if(active) {
+                this._currSeshStart = currSesh.start;
+            }
         } else {
             // Localhost testing
             this._currScreentime = [
@@ -76,6 +87,17 @@ class Page extends LitElement {
         this._currRelMinute = (now.getTime() - startOfDay.getTime()) / 1000 / 60;
     }
 
+    private async _upateStatesMinutely() {
+        this._updateMinutesIntoDay();
+        const {active, currSesh} = await chrome.storage.local.get(["active", "currSesh"]);
+        this._active = active;
+        if (active) {
+            this._currSeshStart = currSesh.start;
+        } else {
+            this._currSeshStart = 0;
+        }
+    }
+
 
 
     render() {
@@ -87,6 +109,8 @@ class Page extends LitElement {
                         .sessions=${this._currScreentime}
                         date=${this._date}
                         currRelMinute=${this._currRelMinute}
+                        ?active=${this._active}
+                        currSeshStart=${this._currSeshStart}
                         @session-selected=${this._onSessionSelected}
                     ></lit-user-history>
                 </div>

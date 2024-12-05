@@ -2,7 +2,7 @@
 const NEWDAY_ALARM = "newday";
 const SESHEND_ALARM = "sesh-end";
 const TIMEOUT = 10; // 10 minutes
-const KEEP_DAYS = 7;
+const KEEP_DAYS = 100;
 
 // The keys of chrome.storage.local:
 // "active"
