@@ -30,7 +30,9 @@ export const styles = css`
     }
 
     .right-item {
-        flex: 1;
+        box-sizing: border-box;
+        height: 50%;
+        border: 1px solid black;
     }
 
 

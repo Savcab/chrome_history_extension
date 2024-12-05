@@ -14,7 +14,7 @@ class Page extends LitElement {
         _date: string = new Date().toDateString();
 
     @state()
-        _currScreentime: Array<ActivitySession> = [];
+        _sessions: Array<ActivitySession> = [];
 
     @state()
         _currRelMinute: number = 0;
@@ -27,9 +27,6 @@ class Page extends LitElement {
 
     @state()
         _active: boolean = false;
-
-    @state()
-        _currSeshStart: number = 0;
 
     // Interval ID for the interval set up in windows.setInterval that updates _currRelMinute
     private _intervalId: number = 0;
@@ -45,17 +42,20 @@ class Page extends LitElement {
         this._intervalId = window.setInterval(() => this._upateStatesMinutely(), 1000 * 60);
         if (window.location.hostname !== "localhost") {
 
-            const {currScreentime, currTabHistory, active, currSesh, currDate} = await chrome.storage.local.get(["currScreentime", "currTabHistory", "active", "currSesh", "currDate"]);
-            this._currScreentime = currScreentime;
+            let {currScreentime, currTabHistory, active, currSesh, currDate} = await chrome.storage.local.get(["currScreentime", "currTabHistory", "active", "currSesh", "currDate"]);
             this._currTabHistory = currTabHistory;
             this._active = active;
             this._date = currDate;
             if(active) {
-                this._currSeshStart = currSesh.start;
+                currScreentime.push({
+                    start: currSesh.start,
+                    end: Date.now()
+                })
             }
+            this._sessions = currScreentime;
         } else {
             // Localhost testing
-            this._currScreentime = [
+            this._sessions = [
                 {end: 1732782393918, start: 1732780868558}
             ];
         }
@@ -88,14 +88,32 @@ class Page extends LitElement {
     }
 
     private async _upateStatesMinutely() {
+        // update _currRelMinute
         this._updateMinutesIntoDay();
-        const {active, currSesh} = await chrome.storage.local.get(["active", "currSesh"]);
-        this._active = active;
-        if (active) {
-            this._currSeshStart = currSesh.start;
-        } else {
-            this._currSeshStart = 0;
+
+        // update _sessions
+        const {active} = await chrome.storage.local.get(["active"]);
+        // Wasn't active before, but is now active - add currSesh
+        if (active && !this._active) {
+            const {currSesh} = await chrome.storage.local.get(["currSesh"]);
+            let sessions = [...this._sessions];
+            sessions.push({
+                start: currSesh.start,
+                end: Date.now()
+            })
+        // Was active before, and also active now - update currSesh
+        } else if (active && this._active) {
+            let sessions = [...this._sessions];
+            sessions[sessions.length - 1] = {
+                start: sessions[sessions.length - 1].start,
+                end: Date.now()
+            }
+        // Was active before, not anymore - remove currSesh(by just setting to currScreentime)
+        } else if (!active && this._active) {
+            const {currScreentime} = await chrome.storage.local.get(["currScreentime"]);
+            this._sessions = currScreentime;
         }
+        this._active = active;
     }
 
 
@@ -106,23 +124,24 @@ class Page extends LitElement {
             <div id='mainbody'>
                 <div class='left-half'>
                     <lit-user-history 
-                        .sessions=${this._currScreentime}
+                        .sessions=${this._sessions}
                         date=${this._date}
                         currRelMinute=${this._currRelMinute}
-                        ?active=${this._active}
-                        currSeshStart=${this._currSeshStart}
                         @session-selected=${this._onSessionSelected}
                     ></lit-user-history>
                 </div>
                 <div class='right-half'>
-                    <lit-session-details 
-                        class='right-item'
-                        date=${this._date}
-                        .sessions=${this._currScreentime}
-                        selectedSessionIdx=${this._selectedSessionIdx}
-                        .tabHistory=${this._currTabHistory}
-                    ></lit-session-details>
-                    <lit-timechart class='right-item'></lit-timechart>
+                    <div class='right-item'>
+                        <lit-session-details 
+                            date=${this._date}
+                            .sessions=${this._sessions}
+                            selectedSessionIdx=${this._selectedSessionIdx}
+                            .tabHistory=${this._currTabHistory}
+                        ></lit-session-details>
+                    </div>
+                    <div class='right-item'>
+                        <lit-timechart></lit-timechart>
+                    </div>
                 </div>
             </div>
         `;

@@ -66,6 +66,7 @@ class SessionDetails extends LitElement {
     private _createTimelineHtml(): TemplateResult {
         try {
             const session = this.sessions[this.selectedSessionIdx];
+            // Logistics for figuring out the timeslots
             const relStartEpoch = this._getRelMs(session.start);
             const relEndEpoch = this._getRelMs(session.end);
 
@@ -115,8 +116,8 @@ class SessionDetails extends LitElement {
                         ${this._getCurrTabs().map((tab) => html`
                             <lit-tab-session
                                 url=${tab.url}
-                                relStart=${this._getRelMs(tab.start)}
-                                relEnd=${this._getRelMs(tab.end)}
+                                relStart=${tab.start - session.start}
+                                relEnd=${tab.end - session.end}
                             ></lit-tab-session>
                         `)}
                     </div>
@@ -124,6 +125,7 @@ class SessionDetails extends LitElement {
                 </div>
             `;
         } catch(e) {
+            // Catches the error when try to take the -1 index in this.sessions
             return html``;
         }
     }

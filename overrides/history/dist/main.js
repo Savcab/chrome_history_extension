@@ -29,12 +29,11 @@ let Page = class Page extends _node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.Lit
     constructor() {
         super(...arguments);
         this._date = new Date().toDateString();
-        this._currScreentime = [];
+        this._sessions = [];
         this._currRelMinute = 0;
         this._selectedSessionIdx = -1;
         this._currTabHistory = [];
         this._active = false;
-        this._currSeshStart = 0;
         // Interval ID for the interval set up in windows.setInterval that updates _currRelMinute
         this._intervalId = 0;
     }
@@ -47,18 +46,21 @@ let Page = class Page extends _node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.Lit
         this._updateMinutesIntoDay();
         this._intervalId = window.setInterval(() => this._upateStatesMinutely(), 1000 * 60);
         if (window.location.hostname !== "localhost") {
-            const { currScreentime, currTabHistory, active, currSesh, currDate } = await chrome.storage.local.get(["currScreentime", "currTabHistory", "active", "currSesh", "currDate"]);
-            this._currScreentime = currScreentime;
+            let { currScreentime, currTabHistory, active, currSesh, currDate } = await chrome.storage.local.get(["currScreentime", "currTabHistory", "active", "currSesh", "currDate"]);
             this._currTabHistory = currTabHistory;
             this._active = active;
             this._date = currDate;
             if (active) {
-                this._currSeshStart = currSesh.start;
+                currScreentime.push({
+                    start: currSesh.start,
+                    end: Date.now()
+                });
             }
+            this._sessions = currScreentime;
         }
         else {
             // Localhost testing
-            this._currScreentime = [
+            this._sessions = [
                 { end: 1732782393918, start: 1732780868558 }
             ];
         }
@@ -87,38 +89,57 @@ let Page = class Page extends _node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.Lit
         this._currRelMinute = (now.getTime() - startOfDay.getTime()) / 1000 / 60;
     }
     async _upateStatesMinutely() {
+        // update _currRelMinute
         this._updateMinutesIntoDay();
-        const { active, currSesh } = await chrome.storage.local.get(["active", "currSesh"]);
+        // update _sessions
+        const { active } = await chrome.storage.local.get(["active"]);
+        // Wasn't active before, but is now active - add currSesh
+        if (active && !this._active) {
+            const { currSesh } = await chrome.storage.local.get(["currSesh"]);
+            let sessions = [...this._sessions];
+            sessions.push({
+                start: currSesh.start,
+                end: Date.now()
+            });
+            // Was active before, and also active now - update currSesh
+        }
+        else if (active && this._active) {
+            let sessions = [...this._sessions];
+            sessions[sessions.length - 1] = {
+                start: sessions[sessions.length - 1].start,
+                end: Date.now()
+            };
+            // Was active before, not anymore - remove currSesh(by just setting to currScreentime)
+        }
+        else if (!active && this._active) {
+            const { currScreentime } = await chrome.storage.local.get(["currScreentime"]);
+            this._sessions = currScreentime;
+        }
         this._active = active;
-        if (active) {
-            this._currSeshStart = currSesh.start;
-        }
-        else {
-            this._currSeshStart = 0;
-        }
     }
     render() {
         return (0,_node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.html) `
             <div id='mainbody'>
                 <div class='left-half'>
                     <lit-user-history 
-                        .sessions=${this._currScreentime}
+                        .sessions=${this._sessions}
                         date=${this._date}
                         currRelMinute=${this._currRelMinute}
-                        ?active=${this._active}
-                        currSeshStart=${this._currSeshStart}
                         @session-selected=${this._onSessionSelected}
                     ></lit-user-history>
                 </div>
                 <div class='right-half'>
-                    <lit-session-details 
-                        class='right-item'
-                        date=${this._date}
-                        .sessions=${this._currScreentime}
-                        selectedSessionIdx=${this._selectedSessionIdx}
-                        .tabHistory=${this._currTabHistory}
-                    ></lit-session-details>
-                    <lit-timechart class='right-item'></lit-timechart>
+                    <div class='right-item'>
+                        <lit-session-details 
+                            date=${this._date}
+                            .sessions=${this._sessions}
+                            selectedSessionIdx=${this._selectedSessionIdx}
+                            .tabHistory=${this._currTabHistory}
+                        ></lit-session-details>
+                    </div>
+                    <div class='right-item'>
+                        <lit-timechart></lit-timechart>
+                    </div>
                 </div>
             </div>
         `;
@@ -130,7 +151,7 @@ __decorate([
 ], Page.prototype, "_date", void 0);
 __decorate([
     (0,_node_modules_lit_decorators__WEBPACK_IMPORTED_MODULE_1__.state)()
-], Page.prototype, "_currScreentime", void 0);
+], Page.prototype, "_sessions", void 0);
 __decorate([
     (0,_node_modules_lit_decorators__WEBPACK_IMPORTED_MODULE_1__.state)()
 ], Page.prototype, "_currRelMinute", void 0);
@@ -143,9 +164,6 @@ __decorate([
 __decorate([
     (0,_node_modules_lit_decorators__WEBPACK_IMPORTED_MODULE_1__.state)()
 ], Page.prototype, "_active", void 0);
-__decorate([
-    (0,_node_modules_lit_decorators__WEBPACK_IMPORTED_MODULE_1__.state)()
-], Page.prototype, "_currSeshStart", void 0);
 Page = __decorate([
     (0,_node_modules_lit_decorators__WEBPACK_IMPORTED_MODULE_1__.customElement)('lit-page')
 ], Page);
@@ -194,7 +212,9 @@ const styles = (0,lit__WEBPACK_IMPORTED_MODULE_0__.css) `
     }
 
     .right-item {
-        flex: 1;
+        box-sizing: border-box;
+        height: 50%;
+        border: 1px solid black;
     }
 
 
@@ -292,6 +312,7 @@ let SessionDetails = class SessionDetails extends lit__WEBPACK_IMPORTED_MODULE_0
     _createTimelineHtml() {
         try {
             const session = this.sessions[this.selectedSessionIdx];
+            // Logistics for figuring out the timeslots
             const relStartEpoch = this._getRelMs(session.start);
             const relEndEpoch = this._getRelMs(session.end);
             const msPerHour = 1000 * 60 * 60;
@@ -337,8 +358,8 @@ let SessionDetails = class SessionDetails extends lit__WEBPACK_IMPORTED_MODULE_0
                         ${this._getCurrTabs().map((tab) => (0,lit__WEBPACK_IMPORTED_MODULE_0__.html) `
                             <lit-tab-session
                                 url=${tab.url}
-                                relStart=${this._getRelMs(tab.start)}
-                                relEnd=${this._getRelMs(tab.end)}
+                                relStart=${tab.start - session.start}
+                                relEnd=${tab.end - session.end}
                             ></lit-tab-session>
                         `)}
                     </div>
@@ -347,6 +368,7 @@ let SessionDetails = class SessionDetails extends lit__WEBPACK_IMPORTED_MODULE_0
             `;
         }
         catch (e) {
+            // Catches the error when try to take the -1 index in this.sessions
             return (0,lit__WEBPACK_IMPORTED_MODULE_0__.html) ``;
         }
     }
@@ -537,7 +559,7 @@ let TabSession = class TabSession extends lit__WEBPACK_IMPORTED_MODULE_0__.LitEl
             top: ${this._msToVh(this.relStart)}vh;
             height: ${this._msToVh(this.relEnd - this.relStart)}vh;
         `;
-        console.log(`TAB ${this.url} has a duration of ${(this.relEnd - this.relStart) / 1000 / 60} minutes`);
+        console.log(`TAB ${this.url} started in ${this.relStart / 1000 / 60 / 60} hours and has a duration of ${(this.relEnd - this.relStart) / 1000 / 60} minutes`);
         return (0,lit__WEBPACK_IMPORTED_MODULE_0__.html) `
             <div
                 class="tab-session"
@@ -865,8 +887,6 @@ let UserHistory = class UserHistory extends lit__WEBPACK_IMPORTED_MODULE_0__.Lit
         this.date = "";
         this.sessions = [];
         this.currRelMinute = 0;
-        this.active = false;
-        this.currSeshStart = 0;
         this._selectedSessionIdx = -1;
     }
     /*
@@ -944,14 +964,6 @@ let UserHistory = class UserHistory extends lit__WEBPACK_IMPORTED_MODULE_0__.Lit
                 timeslots.push({ hour: i, part: j });
             }
         }
-        // The actually displayed sessions (includes current session if exists)
-        const displayedSessions = this.sessions;
-        if (this.active) {
-            displayedSessions.push({
-                start: this.currSeshStart,
-                end: this.currRelMinute * 60 * 1000 + (new Date(this.date)).getTime()
-            });
-        }
         return (0,lit__WEBPACK_IMPORTED_MODULE_0__.html) `
             <div class="mainbody">
                 <div class="date">${this.date}</div>
@@ -973,7 +985,7 @@ let UserHistory = class UserHistory extends lit__WEBPACK_IMPORTED_MODULE_0__.Lit
         })}
 
                             <!-- The actual user activity sessions -->
-                            ${displayedSessions.map((session, idx) => this._sessionMapHTML(session, idx))}
+                            ${this.sessions.map((session, idx) => this._sessionMapHTML(session, idx))}
 
                             <!-- The present timestamp bar -->
                             ${this._createPresentBarHtml()}
@@ -993,12 +1005,6 @@ __decorate([
 __decorate([
     (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.property)({ type: Number, reflect: true })
 ], UserHistory.prototype, "currRelMinute", void 0);
-__decorate([
-    (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.property)({ type: Boolean, reflect: true })
-], UserHistory.prototype, "active", void 0);
-__decorate([
-    (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.property)({ type: Number, reflect: true })
-], UserHistory.prototype, "currSeshStart", void 0);
 __decorate([
     (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.state)()
 ], UserHistory.prototype, "_selectedSessionIdx", void 0);
