@@ -142,7 +142,7 @@ class UserHistory extends LitElement {
         // Make present bar the center of the user's screen
         const presentBar = this.shadowRoot?.querySelector('.present-bar');
         if (presentBar) {
-            presentBar.scrollIntoView({block: "center", behavior: "smooth"});
+            presentBar.scrollIntoView({block: "center"});
         }
     }
 }
