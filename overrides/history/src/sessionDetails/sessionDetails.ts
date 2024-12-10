@@ -39,7 +39,9 @@ class SessionDetails extends LitElement {
             tabSessions.push({
                 url: currTabTimestamps[idx].url,
                 start: currTabTimestamps[idx].timestamp,
-                end: endTimestamp
+                end: endTimestamp,
+                favIconUrl: currTabTimestamps[idx].favIconUrl,
+                title: currTabTimestamps[idx].title
             });
         }
         return tabSessions;
@@ -117,7 +119,9 @@ class SessionDetails extends LitElement {
                             <lit-tab-session
                                 url=${tab.url}
                                 relStart=${tab.start - session.start}
-                                relEnd=${tab.end - session.end}
+                                relEnd=${tab.end - session.start}
+                                title=${tab.title}
+                                favIconUrl=${tab.favIconUrl}
                             ></lit-tab-session>
                         `)}
                     </div>

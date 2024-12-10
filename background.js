@@ -11,8 +11,8 @@ const KEEP_DAYS = 100;
 // "pastScreentimes" - with subkeys "11/7/2024" as dates, then inside are list of "start" and "end"
 // "currScreentime" - a list of "start" and "end"s
 // "currDate" - the current date
-// "currTabHistory" - a list of objects with "url" and "timestamp"
-// "pastTabHistories" - a keys of "11/7/2024" as dates, then inside are list of "url" and "timestamp"
+// "currTabHistory" - a list of objects with "url", "timestamp", "favIconUrl", and "title"
+// "pastTabHistories" - a keys of "11/7/2024" as dates, then inside are list of "url", "timestamp", "favIconUrl", and "title"
 
 
 /**
@@ -164,6 +164,8 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
         currTabHistory.push({
             "url": currTab.url,
             "timestamp": Date.now(),
+            "favIconUrl": currTab.favIconUrl,
+            "title": currTab.title,
         });
         await chrome.storage.local.set({
             "currTabHistory": currTabHistory,

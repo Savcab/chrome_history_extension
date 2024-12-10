@@ -19,6 +19,12 @@ class TabSession extends LitElement {
     @property({type: Number, reflect: true})
         relEnd: number = 0;
 
+    @property({type: String, reflect: true})
+        favIconUrl: string = '';
+
+    @property({type: String, reflect: true})
+        title: string = '';
+
     /*
      * HELPER FUNCTIONS 
      */
@@ -28,6 +34,7 @@ class TabSession extends LitElement {
 
 
     render() {
+        const urlText = this.url ? this.url : "chrome://newtab/";
         // To add the positioning info
         const inlineStyle = `
             top: ${this._msToVh(this.relStart)}vh;
@@ -41,10 +48,12 @@ class TabSession extends LitElement {
                 class="tab-session"
                 style=${inlineStyle}
             >
-                <div
-                 class="url-text"
-                >
-                    ${this.url}
+                <!-- Optional favicon -->
+                ${this.favIconUrl ? html`<img class="fav-icon" src=${this.favIconUrl}></img>` : ''}
+                
+                <!-- Title if it exists, else give url -->
+                <div class="title-text">
+                    ${this.title ? this.title: urlText}
                 </div>
             </div>
         `;

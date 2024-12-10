@@ -28,11 +28,15 @@ var __decorate = (undefined && undefined.__decorate) || function (decorators, ta
 let Page = class Page extends _node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.LitElement {
     constructor() {
         super(...arguments);
+        // Constants
+        this._minTabSeshLength = 2; // in minutes
+        this._minActiveSeshGap = 15; // in minutes
         this._date = new Date().toDateString();
         this._sessions = [];
         this._currRelMinute = 0;
         this._selectedSessionIdx = -1;
-        this._currTabHistory = [];
+        // NOTE: need to change this into using Tab
+        this._tabHistory = [];
         this._active = false;
         // Interval ID for the interval set up in windows.setInterval that updates _currRelMinute
         this._intervalId = 0;
@@ -47,7 +51,7 @@ let Page = class Page extends _node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.Lit
         this._intervalId = window.setInterval(() => this._upateStatesMinutely(), 1000 * 60);
         if (window.location.hostname !== "localhost") {
             let { currScreentime, currTabHistory, active, currSesh, currDate } = await chrome.storage.local.get(["currScreentime", "currTabHistory", "active", "currSesh", "currDate"]);
-            this._currTabHistory = currTabHistory;
+            this._setTabHistory(currTabHistory);
             this._active = active;
             this._date = currDate;
             if (active) {
@@ -56,13 +60,13 @@ let Page = class Page extends _node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.Lit
                     end: Date.now()
                 });
             }
-            this._sessions = currScreentime;
+            this._setSessions(currScreentime);
         }
         else {
             // Localhost testing
-            this._sessions = [
+            this._setSessions([
                 { end: 1732782393918, start: 1732780868558 }
-            ];
+            ]);
         }
     }
     disconnectedCallback() {
@@ -93,6 +97,10 @@ let Page = class Page extends _node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.Lit
         this._updateMinutesIntoDay();
         // update _sessions
         const { active } = await chrome.storage.local.get(["active"]);
+        // DEBUGGING
+        console.log("IN UPDATE STATES MINUTELY");
+        console.log("active: ", active);
+        console.log("this._active: ", this._active);
         // Wasn't active before, but is now active - add currSesh
         if (active && !this._active) {
             const { currSesh } = await chrome.storage.local.get(["currSesh"]);
@@ -101,6 +109,7 @@ let Page = class Page extends _node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.Lit
                 start: currSesh.start,
                 end: Date.now()
             });
+            this._setSessions(sessions);
             // Was active before, and also active now - update currSesh
         }
         else if (active && this._active) {
@@ -109,13 +118,58 @@ let Page = class Page extends _node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.Lit
                 start: sessions[sessions.length - 1].start,
                 end: Date.now()
             };
+            this._setSessions(sessions);
             // Was active before, not anymore - remove currSesh(by just setting to currScreentime)
         }
         else if (!active && this._active) {
             const { currScreentime } = await chrome.storage.local.get(["currScreentime"]);
-            this._sessions = currScreentime;
+            this._setSessions(currScreentime);
         }
         this._active = active;
+    }
+    // To do some data transforamtion before setting _tabHistory. Currently the things it does are:
+    //      remove tab sessions that are less than this._minTabSeshLength
+    //      remove tab sessions next to each other that have the same url
+    _setTabHistory(tabHistory) {
+        let filtered = [];
+        // Remove tab sessions that are less than this._minTabSeshLength
+        // Include last tab no matter what
+        for (let i = 0; i < tabHistory.length - 1; i++) {
+            if (tabHistory[i + 1].timestamp - tabHistory[i].timestamp >= this._minTabSeshLength * 60 * 1000) {
+                filtered.push(tabHistory[i]);
+            }
+        }
+        filtered.push(tabHistory[tabHistory.length - 1]);
+        // Remove tab sessions next to each other that have the same url
+        for (let i = filtered.length - 1; i > 0; i--) {
+            if (filtered[i].url === filtered[i - 1].url) {
+                filtered.splice(i, 1);
+            }
+        }
+        this._tabHistory = filtered;
+    }
+    // To do some data transformation before setting _session. Currently the things it does are:
+    //      merge sessions taht are less that this._minactiveSeshGap minutes apart
+    _setSessions(activeSessions) {
+        // Edge case: empty list
+        if (activeSessions.length === 0) {
+            this._sessions = [];
+            return;
+        }
+        const filtered = [];
+        let currSesh = activeSessions[0];
+        for (let sesh of activeSessions) {
+            if (sesh.start - currSesh.end <= this._minActiveSeshGap * 60 * 1000) {
+                currSesh.end = sesh.end;
+            }
+            else {
+                filtered.push(currSesh);
+                currSesh = sesh;
+            }
+        }
+        // Add the last session
+        filtered.push(currSesh);
+        this._sessions = filtered;
     }
     render() {
         return (0,_node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.html) `
@@ -134,7 +188,7 @@ let Page = class Page extends _node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.Lit
                             date=${this._date}
                             .sessions=${this._sessions}
                             selectedSessionIdx=${this._selectedSessionIdx}
-                            .tabHistory=${this._currTabHistory}
+                            .tabHistory=${this._tabHistory}
                         ></lit-session-details>
                     </div>
                     <div class='right-item'>
@@ -160,7 +214,7 @@ __decorate([
 ], Page.prototype, "_selectedSessionIdx", void 0);
 __decorate([
     (0,_node_modules_lit_decorators__WEBPACK_IMPORTED_MODULE_1__.state)()
-], Page.prototype, "_currTabHistory", void 0);
+], Page.prototype, "_tabHistory", void 0);
 __decorate([
     (0,_node_modules_lit_decorators__WEBPACK_IMPORTED_MODULE_1__.state)()
 ], Page.prototype, "_active", void 0);
@@ -289,7 +343,9 @@ let SessionDetails = class SessionDetails extends lit__WEBPACK_IMPORTED_MODULE_0
             tabSessions.push({
                 url: currTabTimestamps[idx].url,
                 start: currTabTimestamps[idx].timestamp,
-                end: endTimestamp
+                end: endTimestamp,
+                favIconUrl: currTabTimestamps[idx].favIconUrl,
+                title: currTabTimestamps[idx].title
             });
         }
         return tabSessions;
@@ -359,7 +415,9 @@ let SessionDetails = class SessionDetails extends lit__WEBPACK_IMPORTED_MODULE_0
                             <lit-tab-session
                                 url=${tab.url}
                                 relStart=${tab.start - session.start}
-                                relEnd=${tab.end - session.end}
+                                relEnd=${tab.end - session.start}
+                                title=${tab.title}
+                                favIconUrl=${tab.favIconUrl}
                             ></lit-tab-session>
                         `)}
                     </div>
@@ -507,11 +565,26 @@ __webpack_require__.r(__webpack_exports__);
 const styles = (0,lit__WEBPACK_IMPORTED_MODULE_0__.css) `
 
 .tab-session {
-    display: block;
+    display: flex;
     box-sizing: border-box;
     width: 100%;
     position: absolute;
     background-color: yellow;
+    border-left: 1px solid black;
+    border-right: 1px solid black;
+    border-top: 1px solid black;
+}
+
+.fav-icon {
+    width: 30px;
+    height: 30px;
+}
+
+.title-text {
+    width: 100%;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
 }
 
 `;
@@ -546,6 +619,8 @@ let TabSession = class TabSession extends lit__WEBPACK_IMPORTED_MODULE_0__.LitEl
         this.url = '';
         this.relStart = 0;
         this.relEnd = 0;
+        this.favIconUrl = '';
+        this.title = '';
     }
     /*
      * HELPER FUNCTIONS
@@ -554,6 +629,7 @@ let TabSession = class TabSession extends lit__WEBPACK_IMPORTED_MODULE_0__.LitEl
         return _constants__WEBPACK_IMPORTED_MODULE_3__.hourToVh * ms / 1000 / 60 / 60;
     }
     render() {
+        const urlText = this.url ? this.url : "chrome://newtab/";
         // To add the positioning info
         const inlineStyle = `
             top: ${this._msToVh(this.relStart)}vh;
@@ -565,10 +641,12 @@ let TabSession = class TabSession extends lit__WEBPACK_IMPORTED_MODULE_0__.LitEl
                 class="tab-session"
                 style=${inlineStyle}
             >
-                <div
-                 class="url-text"
-                >
-                    ${this.url}
+                <!-- Optional favicon -->
+                ${this.favIconUrl ? (0,lit__WEBPACK_IMPORTED_MODULE_0__.html) `<img class="fav-icon" src=${this.favIconUrl}></img>` : ''}
+                
+                <!-- Title if it exists, else give url -->
+                <div class="title-text">
+                    ${this.title ? this.title : urlText}
                 </div>
             </div>
         `;
@@ -584,6 +662,12 @@ __decorate([
 __decorate([
     (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.property)({ type: Number, reflect: true })
 ], TabSession.prototype, "relEnd", void 0);
+__decorate([
+    (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.property)({ type: String, reflect: true })
+], TabSession.prototype, "favIconUrl", void 0);
+__decorate([
+    (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.property)({ type: String, reflect: true })
+], TabSession.prototype, "title", void 0);
 TabSession = __decorate([
     (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.customElement)('lit-tab-session')
 ], TabSession);
