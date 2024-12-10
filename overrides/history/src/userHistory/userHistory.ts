@@ -94,7 +94,9 @@ class UserHistory extends LitElement {
         `;
     }
 
-
+    /*
+     * LIFECYCLE METHODS
+     */
     render() {
         let timeslots: TimeSlot[] = []
         for (let i = 0; i < 24; i++) {
@@ -133,5 +135,14 @@ class UserHistory extends LitElement {
                     </div>
             </div>
         `;
+    }
+
+
+    updated() {
+        // Make present bar the center of the user's screen
+        const presentBar = this.shadowRoot?.querySelector('.present-bar');
+        if (presentBar) {
+            presentBar.scrollIntoView({block: "center", behavior: "smooth"});
+        }
     }
 }
