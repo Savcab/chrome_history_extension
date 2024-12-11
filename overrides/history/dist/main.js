@@ -14,12 +14,14 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _style__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./style */ "./src/page/style.ts");
 /* harmony import */ var _userHistory_userHistory__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../userHistory/userHistory */ "./src/userHistory/userHistory.ts");
 /* harmony import */ var _sessionDetails_sessionDetails__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../sessionDetails/sessionDetails */ "./src/sessionDetails/sessionDetails.ts");
+/* harmony import */ var _timechart_timechart__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../timechart/timechart */ "./src/timechart/timechart.ts");
 var __decorate = (undefined && undefined.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
+
 
 
 
@@ -32,10 +34,11 @@ let Page = class Page extends _node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.Lit
         this._minTabSeshLength = 2; // in minutes
         this._minActiveSeshGap = 15; // in minutes
         this._date = new Date().toDateString();
+        // NOTE: this state MUST be updated using _setSessions method
         this._sessions = [];
         this._currRelMinute = 0;
         this._selectedSessionIdx = -1;
-        // NOTE: need to change this into using Tab
+        // NOTE: this state MUST be updated using _setTabHistory method
         this._tabHistory = [];
         this._active = false;
         // Interval ID for the interval set up in windows.setInterval that updates _currRelMinute
@@ -68,6 +71,26 @@ let Page = class Page extends _node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.Lit
                 { end: 1732782393918, start: 1732780868558 }
             ]);
         }
+        // Add event listener for chrome.storage updates
+        chrome.storage.onChanged.addListener((changes, areaName) => {
+            console.log("CHROME.STORAGE.LOCAL CHANGED!");
+            console.log("changes: ", changes);
+            console.log("areaName: ", areaName);
+            if (areaName === "local") {
+                if (changes.currScreentime) {
+                    this._setSessions(changes.currScreentime.newValue);
+                }
+                if (changes.currTabHistory) {
+                    this._setTabHistory(changes.currTabHistory.newValue);
+                }
+                if (changes.active) {
+                    this._active = changes.active.newValue;
+                }
+                if (changes.currDate) {
+                    this._date = changes.currDate.newValue;
+                }
+            }
+        });
     }
     disconnectedCallback() {
         super.disconnectedCallback();
@@ -92,40 +115,23 @@ let Page = class Page extends _node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.Lit
         startOfDay.setHours(0, 0, 0, 0);
         this._currRelMinute = (now.getTime() - startOfDay.getTime()) / 1000 / 60;
     }
+    // Need to update minutesIntoDay
+    // Need to update _sessions to be up to date with the current session
     async _upateStatesMinutely() {
+        console.log("UPDATING STATES MINUTELY");
         // update _currRelMinute
         this._updateMinutesIntoDay();
-        // update _sessions
-        const { active } = await chrome.storage.local.get(["active"]);
-        // DEBUGGING
-        console.log("IN UPDATE STATES MINUTELY");
-        console.log("active: ", active);
-        console.log("this._active: ", this._active);
-        // Wasn't active before, but is now active - add currSesh
-        if (active && !this._active) {
-            const { currSesh } = await chrome.storage.local.get(["currSesh"]);
-            let sessions = [...this._sessions];
-            sessions.push({
+        // If active, keep the current session up to this current timestamp
+        if (this._active) {
+            let { currScreentime, currSesh } = await chrome.storage.local.get(["currScreentime", "currSesh"]);
+            currScreentime.push({
                 start: currSesh.start,
                 end: Date.now()
             });
-            this._setSessions(sessions);
-            // Was active before, and also active now - update currSesh
-        }
-        else if (active && this._active) {
-            let sessions = [...this._sessions];
-            sessions[sessions.length - 1] = {
-                start: sessions[sessions.length - 1].start,
-                end: Date.now()
-            };
-            this._setSessions(sessions);
-            // Was active before, not anymore - remove currSesh(by just setting to currScreentime)
-        }
-        else if (!active && this._active) {
-            const { currScreentime } = await chrome.storage.local.get(["currScreentime"]);
             this._setSessions(currScreentime);
         }
-        this._active = active;
+        // DEBUG
+        console.log("this._sessions: ", this._sessions);
     }
     // To do some data transforamtion before setting _tabHistory. Currently the things it does are:
     //      remove tab sessions that are less than this._minTabSeshLength
@@ -192,7 +198,10 @@ let Page = class Page extends _node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.Lit
                         ></lit-session-details>
                     </div>
                     <div class='right-item'>
-                        <lit-timechart></lit-timechart>
+                        <lit-timechart
+                            .sessions=${this._sessions}
+                            .tabHistory=${this._tabHistory}
+                        ></lit-timechart>
                     </div>
                 </div>
             </div>
@@ -289,9 +298,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   timeslotsPerHour: () => (/* binding */ timeslotsPerHour)
 /* harmony export */ });
 // Every 100vh represents 12
-const hourToVh = 100 / 1;
+const hourToVh = 50 / 1;
 // Number of timeslots per hour
-const timeslotsPerHour = 10;
+const timeslotsPerHour = 4;
 
 
 /***/ }),
@@ -671,6 +680,110 @@ __decorate([
 TabSession = __decorate([
     (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.customElement)('lit-tab-session')
 ], TabSession);
+
+
+/***/ }),
+
+/***/ "./src/timechart/timechart.ts":
+/*!************************************!*\
+  !*** ./src/timechart/timechart.ts ***!
+  \************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var lit__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! lit */ "./node_modules/lit/index.js");
+/* harmony import */ var lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! lit/decorators.js */ "./node_modules/lit/decorators.js");
+var __decorate = (undefined && undefined.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+
+
+let TimeChart = class TimeChart extends lit__WEBPACK_IMPORTED_MODULE_0__.LitElement {
+    constructor() {
+        super(...arguments);
+        this.sessions = [];
+        this.tabHistory = [];
+        this._domainsScreentime = new Map();
+    }
+    /*
+     * LIFECYCLE METHODS
+     */
+    connectedCallback() {
+        super.connectedCallback();
+        // Parse the sessions and tabHistory to get the domain times
+        this._calculateDomainTimes();
+    }
+    /*
+     * HELPER FUNCTIONS
+     */
+    _calculateDomainTimes() {
+        var _a;
+        console.log("HERE0");
+        console.log(this.sessions);
+        console.log(this.tabHistory);
+        const domainsScreentime = new Map();
+        let seshIdx = 0;
+        let tabIdx = 0;
+        while (seshIdx != this.sessions.length && tabIdx != this.tabHistory.length) {
+            const tab = this.tabHistory[tabIdx];
+            const sesh = this.sessions[seshIdx];
+            // If this tabTimestamp is before the session
+            if (tab.timestamp < sesh.start) {
+                tabIdx++;
+                // If this tabTimestamp is after the session
+            }
+            else if (tab.timestamp > sesh.end) {
+                seshIdx++;
+                // If this tabTimestamp is within the session
+            }
+            else {
+                const domain = this._getDomain(tab.url);
+                const nextTabTime = tabIdx + 1 < this.tabHistory.length ? this.tabHistory[tabIdx + 1].timestamp : Infinity;
+                const duration = Math.min(nextTabTime, sesh.end) - tab.timestamp;
+                // Update the mapping
+                domainsScreentime.set(domain, (_a = domainsScreentime.get(domain)) !== null && _a !== void 0 ? _a : 0 + duration);
+                tabIdx++;
+            }
+        }
+        // DONT SET FOR TESTING
+        // this._domainsScreentime = domainsScreentime;
+        console.log("CALCULATED DOMAIN SCREENTIME");
+        console.log("Domain screentime:", this._domainsScreentime);
+        return domainsScreentime;
+    }
+    _getDomain(url) {
+        try {
+            const parsedUrl = new URL(url);
+            return parsedUrl.hostname;
+        }
+        catch (error) {
+            console.error("Invalid URL:", error);
+            return url;
+        }
+    }
+    render() {
+        // For testing
+        const mapAsString = JSON.stringify(Array.from(this._calculateDomainTimes().entries()));
+        return (0,lit__WEBPACK_IMPORTED_MODULE_0__.html) `
+            ${mapAsString}
+        `;
+    }
+};
+__decorate([
+    (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.property)({ type: Array, reflect: true })
+], TimeChart.prototype, "sessions", void 0);
+__decorate([
+    (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.property)({ type: Array, reflect: true })
+], TimeChart.prototype, "tabHistory", void 0);
+__decorate([
+    (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.state)()
+], TimeChart.prototype, "_domainsScreentime", void 0);
+TimeChart = __decorate([
+    (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.customElement)('lit-timechart')
+], TimeChart);
 
 
 /***/ }),

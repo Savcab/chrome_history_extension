@@ -4,6 +4,7 @@ import { styles } from './style';
 import { ActivitySession, Tab, TabTimestamp } from '../types';
 import '../userHistory/userHistory';
 import '../sessionDetails/sessionDetails';
+import '../timechart/timechart';
 
 @customElement('lit-page')
 class Page extends LitElement {
@@ -18,6 +19,7 @@ class Page extends LitElement {
     @state()
         _date: string = new Date().toDateString();
 
+    // NOTE: this state MUST be updated using _setSessions method
     @state()
         _sessions: ActivitySession[] = [];
 
@@ -27,7 +29,7 @@ class Page extends LitElement {
     @state()
         _selectedSessionIdx = -1;
 
-    // NOTE: need to change this into using Tab
+    // NOTE: this state MUST be updated using _setTabHistory method
     @state()
         _tabHistory: TabTimestamp[] = [];
 
@@ -47,7 +49,6 @@ class Page extends LitElement {
         this._updateMinutesIntoDay();
         this._intervalId = window.setInterval(() => this._upateStatesMinutely(), 1000 * 60);
         if (window.location.hostname !== "localhost") {
-
             let {currScreentime, currTabHistory, active, currSesh, currDate} = await chrome.storage.local.get(["currScreentime", "currTabHistory", "active", "currSesh", "currDate"]);
             this._setTabHistory(currTabHistory);
             this._active = active;
@@ -65,6 +66,27 @@ class Page extends LitElement {
                 {end: 1732782393918, start: 1732780868558}
             ]);
         }
+
+        // Add event listener for chrome.storage updates
+        chrome.storage.onChanged.addListener((changes, areaName) => {
+            console.log("CHROME.STORAGE.LOCAL CHANGED!");
+            console.log("changes: ", changes);
+            console.log("areaName: ", areaName);
+            if (areaName === "local") {
+                if (changes.currScreentime) {
+                    this._setSessions(changes.currScreentime.newValue);
+                }
+                if (changes.currTabHistory) {
+                    this._setTabHistory(changes.currTabHistory.newValue);
+                }
+                if (changes.active) {
+                    this._active = changes.active.newValue;
+                }
+                if (changes.currDate) {
+                    this._date = changes.currDate.newValue;
+                }
+            }
+        });
     }
 
     disconnectedCallback(): void {
@@ -93,40 +115,25 @@ class Page extends LitElement {
         this._currRelMinute = (now.getTime() - startOfDay.getTime()) / 1000 / 60;
     }
 
+    // Need to update minutesIntoDay
+    // Need to update _sessions to be up to date with the current session
     private async _upateStatesMinutely() {
+        console.log("UPDATING STATES MINUTELY");
         // update _currRelMinute
         this._updateMinutesIntoDay();
 
-        // update _sessions
-        const {active} = await chrome.storage.local.get(["active"]);
-
-        // DEBUGGING
-        console.log("IN UPDATE STATES MINUTELY");
-        console.log("active: ", active);
-        console.log("this._active: ", this._active);
-        // Wasn't active before, but is now active - add currSesh
-        if (active && !this._active) {
-            const {currSesh} = await chrome.storage.local.get(["currSesh"]);
-            let sessions = [...this._sessions];
-            sessions.push({
+        // If active, keep the current session up to this current timestamp
+        if (this._active) {
+            let {currScreentime, currSesh} = await chrome.storage.local.get(["currScreentime", "currSesh"]);
+            currScreentime.push({
                 start: currSesh.start,
                 end: Date.now()
-            })
-            this._setSessions(sessions);
-        // Was active before, and also active now - update currSesh
-        } else if (active && this._active) {
-            let sessions = [...this._sessions];
-            sessions[sessions.length - 1] = {
-                start: sessions[sessions.length - 1].start,
-                end: Date.now()
-            }
-            this._setSessions(sessions);
-        // Was active before, not anymore - remove currSesh(by just setting to currScreentime)
-        } else if (!active && this._active) {
-            const {currScreentime} = await chrome.storage.local.get(["currScreentime"]);
+            });
             this._setSessions(currScreentime);
         }
-        this._active = active;
+
+        // DEBUG
+        console.log("this._sessions: ", this._sessions);
     }
 
     // To do some data transforamtion before setting _tabHistory. Currently the things it does are:
@@ -199,7 +206,10 @@ class Page extends LitElement {
                         ></lit-session-details>
                     </div>
                     <div class='right-item'>
-                        <lit-timechart></lit-timechart>
+                        <lit-timechart
+                            .sessions=${this._sessions}
+                            .tabHistory=${this._tabHistory}
+                        ></lit-timechart>
                     </div>
                 </div>
             </div>
