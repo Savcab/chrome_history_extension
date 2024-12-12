@@ -1157,6 +1157,14 @@ let UserHistory = class UserHistory extends lit__WEBPACK_IMPORTED_MODULE_0__.Lit
     /*
      * LIFECYCLE METHODS
      */
+    firstUpdate() {
+        var _a;
+        // Make present bar the center of the user's screen
+        const presentBar = (_a = this.shadowRoot) === null || _a === void 0 ? void 0 : _a.querySelector('.present-bar');
+        if (presentBar) {
+            presentBar.scrollIntoView({ block: "center" });
+        }
+    }
     render() {
         let timeslots = [];
         for (let i = 0; i < 24; i++) {
@@ -1193,14 +1201,6 @@ let UserHistory = class UserHistory extends lit__WEBPACK_IMPORTED_MODULE_0__.Lit
                     </div>
             </div>
         `;
-    }
-    updated() {
-        var _a;
-        // Make present bar the center of the user's screen
-        const presentBar = (_a = this.shadowRoot) === null || _a === void 0 ? void 0 : _a.querySelector('.present-bar');
-        if (presentBar) {
-            presentBar.scrollIntoView({ block: "center" });
-        }
     }
 };
 UserHistory.styles = _style__WEBPACK_IMPORTED_MODULE_2__.styles;

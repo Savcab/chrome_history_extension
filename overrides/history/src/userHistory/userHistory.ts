@@ -1,4 +1,4 @@
-import { LitElement, html, css, CSSResult, CSSResultGroup, TemplateResult } from 'lit';
+import { LitElement, html, css, CSSResult, CSSResultGroup, TemplateResult, PropertyValues } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import {styles} from './style'
 import { ActivitySession, TimeSlot } from '../types';
@@ -97,6 +97,14 @@ class UserHistory extends LitElement {
     /*
      * LIFECYCLE METHODS
      */
+    firstUpdate() {
+        // Make present bar the center of the user's screen
+        const presentBar = this.shadowRoot?.querySelector('.present-bar');
+        if (presentBar) {
+            presentBar.scrollIntoView({block: "center"});
+        }
+    }
+
     render() {
         let timeslots: TimeSlot[] = []
         for (let i = 0; i < 24; i++) {
@@ -135,14 +143,5 @@ class UserHistory extends LitElement {
                     </div>
             </div>
         `;
-    }
-
-
-    updated() {
-        // Make present bar the center of the user's screen
-        const presentBar = this.shadowRoot?.querySelector('.present-bar');
-        if (presentBar) {
-            presentBar.scrollIntoView({block: "center"});
-        }
     }
 }
