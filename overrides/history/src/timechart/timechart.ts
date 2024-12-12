@@ -1,6 +1,6 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
-import { ActivitySession, TabTimestamp } from '../types';
+import { ActivitySession, TabTimestamp, ChartItem } from '../types';
 
 @customElement('lit-timechart')
 class TimeChart extends LitElement {
@@ -10,28 +10,11 @@ class TimeChart extends LitElement {
 
     @property({type: Array, reflect: true})
         tabHistory: TabTimestamp[] = [];
-
-    @state()
-        _domainsScreentime: Map<string, number> = new Map();
-
-    /*
-     * LIFECYCLE METHODS 
-     */
-    connectedCallback() {
-        super.connectedCallback();
-        // Parse the sessions and tabHistory to get the domain times
-        this._calculateDomainTimes();
-
-    }
-
     
     /*
      * HELPER FUNCTIONS 
      */
     private _calculateDomainTimes() {
-        console.log("HERE0");
-        console.log(this.sessions);
-        console.log(this.tabHistory);
         const domainsScreentime: Map<string, number> = new Map();
         let seshIdx = 0;
         let tabIdx = 0;
@@ -54,10 +37,8 @@ class TimeChart extends LitElement {
                 tabIdx++;
             }
         }
-        // DONT SET FOR TESTING
-        // this._domainsScreentime = domainsScreentime;
         console.log("CALCULATED DOMAIN SCREENTIME");
-        console.log("Domain screentime:", this._domainsScreentime);
+        console.log("Domain screentime:", domainsScreentime);
         return domainsScreentime;
     }
 
@@ -74,10 +55,27 @@ class TimeChart extends LitElement {
 
     render() {
         // For testing
-        const mapAsString = JSON.stringify(Array.from(this._calculateDomainTimes().entries()));
+        // const mapAsString = JSON.stringify(Array.from(this._calculateDomainTimes().entries()));
 
+        // Sort the domains based on screentimes
+        const domainsScreentime = this._calculateDomainTimes();
+        const domainsSorted = Array.from(domainsScreentime.keys());
+        domainsSorted.sort((a, b) => (domainsScreentime.get(b) ?? 0) - (domainsScreentime.get(a) ?? 0));
+        console.log("SORTED DOMAINS");
+        console.log(domainsSorted);
+        let items: ChartItem[] = [];
+        for (let domain of domainsSorted) {
+            items.push({
+                name: domain,
+                value: domainsScreentime.get(domain) ?? 0
+            })
+        }
         return html`
-            ${mapAsString}
+            <div class="chart-container">
+                <lit-chart
+                    .items=${items}
+                ></lit-chart>
+            </div>
         `;
     }
 }

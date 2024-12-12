@@ -23,3 +23,9 @@ export type TimeSlot = {
     hour: number;
     part: number;
 }
+
+// Used for the chart
+export type ChartItem = {
+    name: string;
+    value: number;
+}

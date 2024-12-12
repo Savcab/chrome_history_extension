@@ -706,24 +706,12 @@ let TimeChart = class TimeChart extends lit__WEBPACK_IMPORTED_MODULE_0__.LitElem
         super(...arguments);
         this.sessions = [];
         this.tabHistory = [];
-        this._domainsScreentime = new Map();
-    }
-    /*
-     * LIFECYCLE METHODS
-     */
-    connectedCallback() {
-        super.connectedCallback();
-        // Parse the sessions and tabHistory to get the domain times
-        this._calculateDomainTimes();
     }
     /*
      * HELPER FUNCTIONS
      */
     _calculateDomainTimes() {
         var _a;
-        console.log("HERE0");
-        console.log(this.sessions);
-        console.log(this.tabHistory);
         const domainsScreentime = new Map();
         let seshIdx = 0;
         let tabIdx = 0;
@@ -748,10 +736,8 @@ let TimeChart = class TimeChart extends lit__WEBPACK_IMPORTED_MODULE_0__.LitElem
                 tabIdx++;
             }
         }
-        // DONT SET FOR TESTING
-        // this._domainsScreentime = domainsScreentime;
         console.log("CALCULATED DOMAIN SCREENTIME");
-        console.log("Domain screentime:", this._domainsScreentime);
+        console.log("Domain screentime:", domainsScreentime);
         return domainsScreentime;
     }
     _getDomain(url) {
@@ -766,9 +752,14 @@ let TimeChart = class TimeChart extends lit__WEBPACK_IMPORTED_MODULE_0__.LitElem
     }
     render() {
         // For testing
-        const mapAsString = JSON.stringify(Array.from(this._calculateDomainTimes().entries()));
+        // const mapAsString = JSON.stringify(Array.from(this._calculateDomainTimes().entries()));
+        // Sort the domains based on screentimes
+        const domainsScreentime = this._calculateDomainTimes();
+        const domainsSorted = Array.from(domainsScreentime.keys());
+        domainsSorted.sort((a, b) => { var _a, _b; return ((_a = domainsScreentime.get(b)) !== null && _a !== void 0 ? _a : 0) - ((_b = domainsScreentime.get(a)) !== null && _b !== void 0 ? _b : 0); });
+        console.log("SORTED DOMAINS");
+        console.log(domainsSorted);
         return (0,lit__WEBPACK_IMPORTED_MODULE_0__.html) `
-            ${mapAsString}
         `;
     }
 };
@@ -778,9 +769,6 @@ __decorate([
 __decorate([
     (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.property)({ type: Array, reflect: true })
 ], TimeChart.prototype, "tabHistory", void 0);
-__decorate([
-    (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.state)()
-], TimeChart.prototype, "_domainsScreentime", void 0);
 TimeChart = __decorate([
     (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.customElement)('lit-timechart')
 ], TimeChart);
