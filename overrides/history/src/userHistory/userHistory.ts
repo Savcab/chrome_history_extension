@@ -98,8 +98,10 @@ class UserHistory extends LitElement {
      * LIFECYCLE METHODS
      */
     firstUpdate() {
+        console.log("IN FIRSTUPDATE FOR USERHISTORY");
         // Make present bar the center of the user's screen
         const presentBar = this.shadowRoot?.querySelector('.present-bar');
+        console.log(presentBar);
         if (presentBar) {
             presentBar.scrollIntoView({block: "center"});
         }

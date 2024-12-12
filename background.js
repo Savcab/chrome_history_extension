@@ -13,8 +13,6 @@ const KEEP_DAYS = 100;
 // "currDate" - the current date
 // "currTabHistory" - a list of objects with "url", "timestamp", "favIconUrl", and "title"
 // "pastTabHistories" - a keys of "11/7/2024" as dates, then inside are list of "url", "timestamp", "favIconUrl", and "title"
-// "currDomainTimes" - an object which maps domain(google.com) to screentime(number)
-// "pastDomainTimes" - a keys of "11/7/2024" as dates, then inside are object which maps domain(google.com) to screentime(number)
 
 /*
  * HELPER FUNCTIONS 
@@ -43,41 +41,6 @@ async function activeSeshStart(time) {
     });
     await chrome.alarms.create(SESHEND_ALARM, {
         delayInMinutes: TIMEOUT,
-    });
-}
-
-// Calculates the screentime for each domain for today
-// Returns an object. Doesn't update chrome.storage.local
-async function updateCurrDomainTimes() {
-    const domainsScreentime = {};
-    const {currTabHistory, currScreentime} = await chrome.storage.local.get(["currTabHistory", "currScreentime", "currDate"]);
-    let seshIdx = 0;
-    let tabIdx = 0;
-    while (seshIdx != currScreentime.length && tabIdx != currTabHistory.length) {
-        const tab = currTabHistory[tabIdx];
-        const sesh = currScreentime[seshIdx];
-        // If this tabTimestamp is before the session
-        if (tab.timestamp < sesh.start) {
-            tabIdx++;
-        // If this tabTimestamp is after the session
-        } else if (tab.timestamp > sesh.end) {
-            seshIdx++;
-        // If this tabTimestamp is within the session
-        } else {
-            const domain = this._getDomain(tab.url);
-            const nextTabTime = tabIdx + 1 < currTabHistory.length ? currTabHistory[tabIdx + 1].timestamp : Infinity;
-            const duration = Math.min(nextTabTime, sesh.end) - tab.timestamp;
-            // Update the mapping
-            domainsScreentime.domain = domainsScreentime.domain ?? 0 + duration;
-            tabIdx++;
-        }
-    }
-    console.log("CALCULATED DOMAIN SCREENTIME");
-    console.log("Domain screentime:", domainsScreentime);
-
-    // Update currDomainTimes
-    await chrome.storage.local.set({
-        "currDomainTimes": domainsScreentime,
     });
 }
 
@@ -141,10 +104,8 @@ function clearStaleDates(pastHistories, staleDate) {
 async function updateToNewDay(keepDays) {
     // Stops any currently active sessions and updates currScreentime with the last session
     await activeSeshEnd();
-    // Updates currDomainTimes
-    await updateCurrDomainTimes();
     // Get the current data
-    const {currScreentime, pastScreentimes, currTabHistory, pastTabHistories, currDomainTimes, pastDomainTimes, currDate} = await chrome.storage.local.get(["currScreentime", "pastScreentimes", "currTabHistory", "pastTabHistories", "currDate"]);
+    const {currScreentime, pastScreentimes, currTabHistory, pastTabHistories, currDate} = await chrome.storage.local.get(["currScreentime", "pastScreentimes", "currTabHistory", "pastTabHistories", "currDate"]);
     // Calculate the stale date 
     const currDateObj = new Date(currDate);
     const staleDate = new Date();
@@ -157,17 +118,12 @@ async function updateToNewDay(keepDays) {
     // update pastTabHistories
     clearStaleDates(pastTabHistories, staleDate);
     pastTabHistories[currDate] = currTabHistory;
-    // Update pastDomainTimes
-    clearStaleDates(pastDomainTimes, staleDate);
-    pastDomainTimes[currDate] = currDomainTimes;
     // make the calls
     await chrome.storage.local.set({
         "pastScreentimes": pastScreentimes,
         "pastTabHistories": pastTabHistories,
-        "pastDomainTimes": pastDomainTimes,
         "currScreentime": [],
         "currTabHistory": [],
-        "currDomainTimes": {},
         "currDate": todayStr,
     })
 }
@@ -197,8 +153,6 @@ chrome.runtime.onInstalled.addListener(async ({reason}) => {
             "currDate": new Date().toLocaleDateString(),
             "currTabHistory": [],
             "pastTabHistories": {},
-            "currDomainTimes": {},
-            "pastDomainTimes": {},
         });
     } catch(e) {
         console.error("BACKGROUND.JS: Error in onInstalled", e);
@@ -257,15 +211,5 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
         }
     } catch(e) {
         console.error("BACKGROUND.JS: Error in onAlarm: ", e);
-    }
-});
-
-// Storage change
-chrome.storage.onChanged.addListener((changes, area) => {
-    console.log("IN STORAGE CHANGE LISTENER");
-    console.log(changes);
-    // When currTabHistory or currScreentime changed, update currDomainTimes
-    if (changes.hasOwnProperty("currTabHistory") || changes.hasOwnProperty("currScreentime")) {
-        updateCurrDomainTimes();
     }
 });

@@ -753,13 +753,26 @@ let TimeChart = class TimeChart extends lit__WEBPACK_IMPORTED_MODULE_0__.LitElem
     render() {
         // For testing
         // const mapAsString = JSON.stringify(Array.from(this._calculateDomainTimes().entries()));
+        var _a;
         // Sort the domains based on screentimes
         const domainsScreentime = this._calculateDomainTimes();
         const domainsSorted = Array.from(domainsScreentime.keys());
         domainsSorted.sort((a, b) => { var _a, _b; return ((_a = domainsScreentime.get(b)) !== null && _a !== void 0 ? _a : 0) - ((_b = domainsScreentime.get(a)) !== null && _b !== void 0 ? _b : 0); });
         console.log("SORTED DOMAINS");
         console.log(domainsSorted);
+        let items = [];
+        for (let domain of domainsSorted) {
+            items.push({
+                name: domain,
+                value: (_a = domainsScreentime.get(domain)) !== null && _a !== void 0 ? _a : 0
+            });
+        }
         return (0,lit__WEBPACK_IMPORTED_MODULE_0__.html) `
+            <div class="chart-container">
+                <lit-chart
+                    .items=${items}
+                ></lit-chart>
+            </div>
         `;
     }
 };
@@ -1147,8 +1160,10 @@ let UserHistory = class UserHistory extends lit__WEBPACK_IMPORTED_MODULE_0__.Lit
      */
     firstUpdate() {
         var _a;
+        console.log("IN FIRSTUPDATE FOR USERHISTORY");
         // Make present bar the center of the user's screen
         const presentBar = (_a = this.shadowRoot) === null || _a === void 0 ? void 0 : _a.querySelector('.present-bar');
+        console.log(presentBar);
         if (presentBar) {
             presentBar.scrollIntoView({ block: "center" });
         }
