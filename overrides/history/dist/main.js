@@ -708,18 +708,26 @@ let Chart = class Chart extends lit__WEBPACK_IMPORTED_MODULE_0__.LitElement {
         super(...arguments);
         this.items = [];
         this.maxValue = 0;
-        this.unit = "";
     }
     /*
      * HELPER FUNCTIONS
      */
+    _hoursToString(hours) {
+        let numHours = Math.floor(hours);
+        let numMinutes = Math.floor((hours - numHours) * 60);
+        return `${numHours}h ${numMinutes}m`;
+    }
     _makeBarsHtml(item) {
         const style = `
-            height: ${100 * item.value / this.maxValue}%;
+            height: ${100 * item.value / (Math.floor(this.maxValue) + 1)}%;
         `;
         return (0,lit__WEBPACK_IMPORTED_MODULE_0__.html) `
             <div class="bar" style=${style}>
                 <div class="item-name">${item.name}</div>
+                <div class="bar-tooltip">
+                    Domain: ${item.name} <br>
+                    Screentime: ${this._hoursToString(item.value)}
+                </div>
             </div>
         `;
     }
@@ -729,7 +737,7 @@ let Chart = class Chart extends lit__WEBPACK_IMPORTED_MODULE_0__.LitElement {
             const slot = (0,lit__WEBPACK_IMPORTED_MODULE_0__.html) `
                 <div class="measurement-line ${i === Math.floor(this.maxValue) + 1 ? "last" : ""}">
                     <div class="measurement-text">
-                        ${i} ${this.unit}
+                        ${i} hours
                     </div>
                 </div>
             `;
@@ -755,9 +763,6 @@ __decorate([
 __decorate([
     (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.property)({ type: Number, reflect: true })
 ], Chart.prototype, "maxValue", void 0);
-__decorate([
-    (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.property)({ type: String, reflect: true })
-], Chart.prototype, "unit", void 0);
 Chart = __decorate([
     (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.customElement)('lit-chart')
 ], Chart);
@@ -827,9 +832,24 @@ const styles = (0,lit__WEBPACK_IMPORTED_MODULE_0__.css) `
     flex: 1;
     background-color: red;
     display: flex;
-    align-items: flex-end;
+    justify-content: center;
     position: relative;
     border-top: 1px solid black;
+}
+
+.bar-tooltip {
+    background-color: gray;
+    color: white;
+    position: absolute;
+    top: 0;
+    transform: translateY(-100%);
+    padding: 5px;
+    border-radius: 5px;
+    visibility: hidden;
+}
+
+.bar:hover .bar-tooltip {
+    visibility: visible;
 }
 
 .item-name {
@@ -977,7 +997,6 @@ let TimeChart = class TimeChart extends lit__WEBPACK_IMPORTED_MODULE_0__.LitElem
                     class="chart"
                     .items=${items.slice(0, 3)}
                     .maxValue=${screentimeSum}
-                    unit="hours"
                 ></lit-chart>
             </div>
         `;

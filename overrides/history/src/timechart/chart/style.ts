@@ -50,9 +50,24 @@ export const styles = css`
     flex: 1;
     background-color: red;
     display: flex;
-    align-items: flex-end;
+    justify-content: center;
     position: relative;
     border-top: 1px solid black;
+}
+
+.bar-tooltip {
+    background-color: gray;
+    color: white;
+    position: absolute;
+    top: 0;
+    transform: translateY(-100%);
+    padding: 5px;
+    border-radius: 5px;
+    visibility: hidden;
+}
+
+.bar:hover .bar-tooltip {
+    visibility: visible;
 }
 
 .item-name {

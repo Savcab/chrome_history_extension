@@ -13,20 +13,27 @@ class Chart extends LitElement {
     @property({type: Number, reflect: true})
         maxValue: number = 0;
 
-    @property({type: String, reflect: true})
-        unit: string = "";
-
     /*
      * HELPER FUNCTIONS 
      */
+    private _hoursToString(hours: number): string {
+        let numHours = Math.floor(hours);
+        let numMinutes = Math.floor((hours - numHours) * 60);
+        return `${numHours}h ${numMinutes}m`;
+    }
+
     private _makeBarsHtml(item: ChartItem) {
         const style = `
-            height: ${100 * item.value / this.maxValue}%;
+            height: ${100 * item.value / (Math.floor(this.maxValue) + 1)}%;
         `;
 
         return html`
             <div class="bar" style=${style}>
                 <div class="item-name">${item.name}</div>
+                <div class="bar-tooltip">
+                    Domain: ${item.name} <br>
+                    Screentime: ${this._hoursToString(item.value)}
+                </div>
             </div>
         `;
     }
@@ -37,7 +44,7 @@ class Chart extends LitElement {
             const slot = html`
                 <div class="measurement-line ${i === Math.floor(this.maxValue) + 1 ? "last": ""}">
                     <div class="measurement-text">
-                        ${i} ${this.unit}
+                        ${i} hours
                     </div>
                 </div>
             `;

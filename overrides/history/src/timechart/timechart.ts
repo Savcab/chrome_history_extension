@@ -84,7 +84,6 @@ class TimeChart extends LitElement {
                     class="chart"
                     .items=${items.slice(0, 3)}
                     .maxValue=${screentimeSum}
-                    unit="hours"
                 ></lit-chart>
             </div>
         `;
