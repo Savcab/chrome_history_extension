@@ -684,6 +684,202 @@ TabSession = __decorate([
 
 /***/ }),
 
+/***/ "./src/timechart/chart/chart.ts":
+/*!**************************************!*\
+  !*** ./src/timechart/chart/chart.ts ***!
+  \**************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var lit__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! lit */ "./node_modules/lit/index.js");
+/* harmony import */ var lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! lit/decorators.js */ "./node_modules/lit/decorators.js");
+/* harmony import */ var _style__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./style */ "./src/timechart/chart/style.ts");
+var __decorate = (undefined && undefined.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+
+
+
+let Chart = class Chart extends lit__WEBPACK_IMPORTED_MODULE_0__.LitElement {
+    constructor() {
+        super(...arguments);
+        this.items = [];
+        this.maxValue = 0;
+        this.unit = "";
+    }
+    /*
+     * HELPER FUNCTIONS
+     */
+    _makeBarsHtml(item) {
+        const style = `
+            height: ${100 * item.value / this.maxValue}%;
+        `;
+        return (0,lit__WEBPACK_IMPORTED_MODULE_0__.html) `
+            <div class="bar" style=${style}>
+                <div class="item-name">${item.name}</div>
+            </div>
+        `;
+    }
+    render() {
+        let measurementSlots = [];
+        for (let i = 1; i <= Math.floor(this.maxValue) + 1; i++) {
+            const slot = (0,lit__WEBPACK_IMPORTED_MODULE_0__.html) `
+                <div class="measurement-line ${i === Math.floor(this.maxValue) + 1 ? "last" : ""}">
+                    <div class="measurement-text">
+                        ${i} ${this.unit}
+                    </div>
+                </div>
+            `;
+            measurementSlots.push(slot);
+        }
+        return (0,lit__WEBPACK_IMPORTED_MODULE_0__.html) `
+            <div class="body">
+                <div class="vertical-measurement-bar">
+                    ${measurementSlots}
+                </div>
+                <!-- Create the bar items -->
+                 <div class="bars-container">
+                    ${this.items.map(item => this._makeBarsHtml(item))}
+                </div>
+            </div>
+        `;
+    }
+};
+Chart.styles = _style__WEBPACK_IMPORTED_MODULE_2__.styles;
+__decorate([
+    (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.property)({ type: Array, reflect: true })
+], Chart.prototype, "items", void 0);
+__decorate([
+    (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.property)({ type: Number, reflect: true })
+], Chart.prototype, "maxValue", void 0);
+__decorate([
+    (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.property)({ type: String, reflect: true })
+], Chart.prototype, "unit", void 0);
+Chart = __decorate([
+    (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.customElement)('lit-chart')
+], Chart);
+
+
+/***/ }),
+
+/***/ "./src/timechart/chart/style.ts":
+/*!**************************************!*\
+  !*** ./src/timechart/chart/style.ts ***!
+  \**************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   styles: () => (/* binding */ styles)
+/* harmony export */ });
+/* harmony import */ var lit__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! lit */ "./node_modules/lit/index.js");
+
+const styles = (0,lit__WEBPACK_IMPORTED_MODULE_0__.css) `
+.body {
+    display: flex;
+    box-sizing: border-box;
+    height: 100%;
+    width: 100%;
+}
+
+.vertical-measurement-bar {
+    width: 10px;
+    height: 100%;
+    display: flex;
+    flex-direction: column-reverse;
+    transform: translateX(-50%);
+}
+
+.measurement-line {
+    flex: 1;
+    width: 100%;
+    border-top: 1px solid black;
+    position: relative;
+}
+
+.measurement-line.last {
+    border-top: none;
+}
+
+.measurement-text {
+    width: fit-content;
+    text-align: center;
+    position: absolute;
+    top: 0;
+    transform: translate(-100%, -50%);
+}
+
+.bars-container {
+    height: 100%;
+    width: 100%;
+    box-sizing: border-box;
+    display: flex;
+    gap: 10%;
+    align-items: flex-end;
+    padding-left: 10%;
+    padding-right: 10%;
+}
+
+.bar {
+    flex: 1;
+    background-color: red;
+    display: flex;
+    align-items: flex-end;
+    position: relative;
+    border-top: 1px solid black;
+}
+
+.item-name {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    transform: translateY(100%);
+    text-align: center;
+    font-weight: bold;
+}
+
+`;
+
+
+/***/ }),
+
+/***/ "./src/timechart/style.ts":
+/*!********************************!*\
+  !*** ./src/timechart/style.ts ***!
+  \********************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   styles: () => (/* binding */ styles)
+/* harmony export */ });
+/* harmony import */ var lit__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! lit */ "./node_modules/lit/index.js");
+
+const styles = (0,lit__WEBPACK_IMPORTED_MODULE_0__.css) `
+.body {
+    display: flex;
+    box-sizing: border-box;
+    height: 100%;
+    width: 100%;
+    padding: 60px;
+}
+
+.chart {
+    box-sizing: border-box;
+    width: 100%;
+    height: 100%;
+    border: 1px solid black;
+}
+
+
+`;
+
+
+/***/ }),
+
 /***/ "./src/timechart/timechart.ts":
 /*!************************************!*\
   !*** ./src/timechart/timechart.ts ***!
@@ -693,12 +889,16 @@ TabSession = __decorate([
 __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var lit__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! lit */ "./node_modules/lit/index.js");
 /* harmony import */ var lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! lit/decorators.js */ "./node_modules/lit/decorators.js");
+/* harmony import */ var _style__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./style */ "./src/timechart/style.ts");
+/* harmony import */ var _chart_chart__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./chart/chart */ "./src/timechart/chart/chart.ts");
 var __decorate = (undefined && undefined.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
+
+
 
 
 let TimeChart = class TimeChart extends lit__WEBPACK_IMPORTED_MODULE_0__.LitElement {
@@ -751,8 +951,6 @@ let TimeChart = class TimeChart extends lit__WEBPACK_IMPORTED_MODULE_0__.LitElem
         }
     }
     render() {
-        // For testing
-        // const mapAsString = JSON.stringify(Array.from(this._calculateDomainTimes().entries()));
         var _a;
         // Sort the domains based on screentimes
         const domainsScreentime = this._calculateDomainTimes();
@@ -760,22 +958,32 @@ let TimeChart = class TimeChart extends lit__WEBPACK_IMPORTED_MODULE_0__.LitElem
         domainsSorted.sort((a, b) => { var _a, _b; return ((_a = domainsScreentime.get(b)) !== null && _a !== void 0 ? _a : 0) - ((_b = domainsScreentime.get(a)) !== null && _b !== void 0 ? _b : 0); });
         console.log("SORTED DOMAINS");
         console.log(domainsSorted);
+        // Create data for the chart
         let items = [];
         for (let domain of domainsSorted) {
             items.push({
                 name: domain,
-                value: (_a = domainsScreentime.get(domain)) !== null && _a !== void 0 ? _a : 0
+                value: ((_a = domainsScreentime.get(domain)) !== null && _a !== void 0 ? _a : 0) / 1000 / 60 / 60
             });
         }
+        let screentimeSum = items.reduce((acc, item) => acc + item.value, 0);
+        console.log("CHART ITEMS");
+        console.log(items);
+        console.log("CHART ITEMS SLICED");
+        console.log(items.slice(0, 3));
         return (0,lit__WEBPACK_IMPORTED_MODULE_0__.html) `
-            <div class="chart-container">
+            <div class="body">
                 <lit-chart
-                    .items=${items}
+                    class="chart"
+                    .items=${items.slice(0, 3)}
+                    .maxValue=${screentimeSum}
+                    unit="hours"
                 ></lit-chart>
             </div>
         `;
     }
 };
+TimeChart.styles = _style__WEBPACK_IMPORTED_MODULE_2__.styles;
 __decorate([
     (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.property)({ type: Array, reflect: true })
 ], TimeChart.prototype, "sessions", void 0);
@@ -1158,7 +1366,7 @@ let UserHistory = class UserHistory extends lit__WEBPACK_IMPORTED_MODULE_0__.Lit
     /*
      * LIFECYCLE METHODS
      */
-    firstUpdate() {
+    firstUpdated() {
         var _a;
         console.log("IN FIRSTUPDATE FOR USERHISTORY");
         // Make present bar the center of the user's screen

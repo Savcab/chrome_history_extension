@@ -1,9 +1,13 @@
-import { LitElement, html, css } from 'lit';
+import { LitElement, html, css, CSSResultGroup } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { ActivitySession, TabTimestamp, ChartItem } from '../types';
+import { styles } from './style';
+import './chart/chart';
 
 @customElement('lit-timechart')
 class TimeChart extends LitElement {
+
+    static styles = styles;
 
     @property({type: Array, reflect: true})
         sessions: ActivitySession[] = [];
@@ -54,26 +58,33 @@ class TimeChart extends LitElement {
 
 
     render() {
-        // For testing
-        // const mapAsString = JSON.stringify(Array.from(this._calculateDomainTimes().entries()));
-
         // Sort the domains based on screentimes
         const domainsScreentime = this._calculateDomainTimes();
         const domainsSorted = Array.from(domainsScreentime.keys());
         domainsSorted.sort((a, b) => (domainsScreentime.get(b) ?? 0) - (domainsScreentime.get(a) ?? 0));
         console.log("SORTED DOMAINS");
         console.log(domainsSorted);
+
+        // Create data for the chart
         let items: ChartItem[] = [];
         for (let domain of domainsSorted) {
             items.push({
                 name: domain,
-                value: domainsScreentime.get(domain) ?? 0
+                value: (domainsScreentime.get(domain) ?? 0) / 1000 / 60 / 60
             })
         }
+        let screentimeSum = items.reduce((acc, item) => acc + item.value, 0);
+        console.log("CHART ITEMS");
+        console.log(items);
+        console.log("CHART ITEMS SLICED");
+        console.log(items.slice(0, 3));
         return html`
-            <div class="chart-container">
+            <div class="body">
                 <lit-chart
-                    .items=${items}
+                    class="chart"
+                    .items=${items.slice(0, 3)}
+                    .maxValue=${screentimeSum}
+                    unit="hours"
                 ></lit-chart>
             </div>
         `;
