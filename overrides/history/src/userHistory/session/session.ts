@@ -54,6 +54,12 @@ export class Session extends LitElement {
         return hourToVh * ms / 1000 / 60 / 60;
     }
 
+    private _hoursToString(hours: number): string {
+        let numHours = Math.floor(hours);
+        let numMinutes = Math.floor((hours - numHours) * 60);
+        return `${numHours}h ${numMinutes}m`;
+    }
+
     render() {
         // To add the positioning info
         const inlineStyle = `
@@ -68,7 +74,9 @@ export class Session extends LitElement {
                 @mouseenter=${this._onMouseEnter}
                 @click=${this._onClick}
             >
-
+                <div class="duration">
+                    ${this._hoursToString((this.end - this.start) / 1000 / 60 / 60)}
+                </div>
             </div>
         `;
     }

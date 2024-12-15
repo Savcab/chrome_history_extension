@@ -5,7 +5,9 @@ export const styles = css`
 .session {
     --trans-time: 0.3s;
 
-    display: block;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     box-sizing: border-box;
     width: 100%;
     position: absolute;
@@ -22,6 +24,12 @@ export const styles = css`
 .session.selected {
     box-shadow: 4px 2px 4px rgba(0, 0, 0, 0.3);
     background-color: darkorange;
+}
+
+.duration {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: black
 }
     
 `;

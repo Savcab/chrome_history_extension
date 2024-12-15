@@ -33,7 +33,7 @@ class SessionDetails extends LitElement {
         for (let idx = 0; idx < currTabTimestamps.length; idx++) {
             // The start of the next tab, if it's the last one, the end of this activity session
             const endTimestamp = idx !== currTabTimestamps.length - 1 ? 
-            currTabTimestamps[idx + 1].timestamp : 
+                currTabTimestamps[idx + 1].timestamp : 
                 this.sessions[this.selectedSessionIdx].end;
             
             tabSessions.push({
@@ -44,6 +44,10 @@ class SessionDetails extends LitElement {
                 title: currTabTimestamps[idx].title
             });
         }
+        console.log("tabSessions:", tabSessions);
+        tabSessions.forEach(tab => {
+            console.log(`Tab ${tab.url}. Started: ${new Date(tab.start).toLocaleTimeString()}. Ended: ${new Date(tab.end).toLocaleTimeString()}`);
+        });
         return tabSessions;
     }
 

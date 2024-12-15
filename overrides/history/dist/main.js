@@ -357,6 +357,10 @@ let SessionDetails = class SessionDetails extends lit__WEBPACK_IMPORTED_MODULE_0
                 title: currTabTimestamps[idx].title
             });
         }
+        console.log("tabSessions:", tabSessions);
+        tabSessions.forEach(tab => {
+            console.log(`Tab ${tab.url}. Started: ${new Date(tab.start).toLocaleTimeString()}. Ended: ${new Date(tab.end).toLocaleTimeString()}`);
+        });
         return tabSessions;
     }
     _getTimestampText(hour, part) {
@@ -582,6 +586,7 @@ const styles = (0,lit__WEBPACK_IMPORTED_MODULE_0__.css) `
     border-left: 1px solid black;
     border-right: 1px solid black;
     border-top: 1px solid black;
+    opacity: 0.95;
 }
 
 .fav-icon {
@@ -879,18 +884,46 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var lit__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! lit */ "./node_modules/lit/index.js");
 
 const styles = (0,lit__WEBPACK_IMPORTED_MODULE_0__.css) `
+:host {
+    --graph-padding: 60px;
+    --total-time-color: orange;
+}
 .body {
-    display: flex;
     box-sizing: border-box;
     height: 100%;
     width: 100%;
-    padding: 60px;
+    display: flex;
+    flex-direction: column;
+    padding-top: 20px;
+    padding-left: var(--graph-padding);
+    padding-right: var(--graph-padding);
+    padding-bottom: var(--graph-padding);
+}
+
+.total-time {
+    text-align: center;
+    font-size: 3em;
+    margin-bottom: 10px;
+    color: var(--total-time-color);
+}
+
+.graph-title {
+    text-align: center;
+    font-size: 2em;
+}
+
+.dropdown {
+    font-size: 0.75em;
+    color: gray;
+    margin: 5px;
+    font-family: serif;
+    display: flex;
+    justify-content: flex-end;
 }
 
 .chart {
     box-sizing: border-box;
-    width: 100%;
-    height: 100%;
+    flex: 1;
     border: 1px solid black;
 }
 
@@ -926,25 +959,53 @@ let TimeChart = class TimeChart extends lit__WEBPACK_IMPORTED_MODULE_0__.LitElem
         super(...arguments);
         this.sessions = [];
         this.tabHistory = [];
+        this.displayTop = 3;
     }
     /*
      * HELPER FUNCTIONS
      */
     _calculateDomainTimes() {
         var _a;
+        // Sanity test
+        console.log("HERE IN CALCULATE DOMAIN TIME");
+        let sumTime = 0;
+        for (let sesh of this.sessions) {
+            sumTime += sesh.end - sesh.start;
+        }
+        sumTime /= (1000 * 60 * 60);
+        console.log("Total time:", sumTime);
+        console.log("sessions:", this.sessions);
+        console.log("tabHistory:", this.tabHistory);
         const domainsScreentime = new Map();
         let seshIdx = 0;
         let tabIdx = 0;
         while (seshIdx != this.sessions.length && tabIdx != this.tabHistory.length) {
             const tab = this.tabHistory[tabIdx];
             const sesh = this.sessions[seshIdx];
+            console.log("tab:", new Date(tab.timestamp).toLocaleDateString('en-US', {
+                hour: 'numeric',
+                minute: 'numeric',
+                hour12: false
+            }));
+            console.log("sesh start:", new Date(sesh.start).toLocaleDateString('en-US', {
+                hour: 'numeric',
+                minute: 'numeric',
+                hour12: false
+            }));
+            console.log("sesh end:", new Date(sesh.end).toLocaleDateString('en-US', {
+                hour: 'numeric',
+                minute: 'numeric',
+                hour12: false
+            }));
             // If this tabTimestamp is before the session
             if (tab.timestamp < sesh.start) {
                 tabIdx++;
+                console.log("HERE IN INCREAES TABIDX");
                 // If this tabTimestamp is after the session
             }
             else if (tab.timestamp > sesh.end) {
                 seshIdx++;
+                console.log("HERE IN INCREAES SESHIDX");
                 // If this tabTimestamp is within the session
             }
             else {
@@ -954,6 +1015,7 @@ let TimeChart = class TimeChart extends lit__WEBPACK_IMPORTED_MODULE_0__.LitElem
                 // Update the mapping
                 domainsScreentime.set(domain, (_a = domainsScreentime.get(domain)) !== null && _a !== void 0 ? _a : 0 + duration);
                 tabIdx++;
+                console.log("TAB IS WITHIN SESSION");
             }
         }
         console.log("CALCULATED DOMAIN SCREENTIME");
@@ -966,9 +1028,21 @@ let TimeChart = class TimeChart extends lit__WEBPACK_IMPORTED_MODULE_0__.LitElem
             return parsedUrl.hostname;
         }
         catch (error) {
-            console.error("Invalid URL:", error);
+            // console.error("Invalid URL:", error);
             return url;
         }
+    }
+    _hoursToString(hours) {
+        let numHours = Math.floor(hours);
+        let numMinutes = Math.floor((hours - numHours) * 60);
+        return `${numHours}h ${numMinutes}m`;
+    }
+    /*
+     * EVENT HANDLERS
+     */
+    _onDisplayTopChange(event) {
+        console.log(event);
+        this.displayTop = parseInt(event.target.value);
     }
     render() {
         var _a;
@@ -987,15 +1061,25 @@ let TimeChart = class TimeChart extends lit__WEBPACK_IMPORTED_MODULE_0__.LitElem
             });
         }
         let screentimeSum = items.reduce((acc, item) => acc + item.value, 0);
-        console.log("CHART ITEMS");
-        console.log(items);
-        console.log("CHART ITEMS SLICED");
-        console.log(items.slice(0, 3));
         return (0,lit__WEBPACK_IMPORTED_MODULE_0__.html) `
             <div class="body">
+                <div class="total-time">
+                    Total screentime: ${this._hoursToString(screentimeSum)}
+                </div>
+                <div class="graph-title">
+                    Screentime by domain <br>
+                    <div class="dropdown">
+                        Show top  <select @change=${this._onDisplayTopChange} .value=${this.displayTop.toString()}>
+                            <option value=3>3 domains</option>
+                            <option value=5>5 domains</option>
+                            <option value=10>10 domains</option>
+                            <option value=20>20 domains</option>
+                        </select>
+                    </div>
+                </div>
                 <lit-chart
                     class="chart"
-                    .items=${items.slice(0, 3)}
+                    .items=${items.slice(0, this.displayTop)}
                     .maxValue=${screentimeSum}
                 ></lit-chart>
             </div>
@@ -1009,6 +1093,9 @@ __decorate([
 __decorate([
     (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.property)({ type: Array, reflect: true })
 ], TimeChart.prototype, "tabHistory", void 0);
+__decorate([
+    (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.state)()
+], TimeChart.prototype, "displayTop", void 0);
 TimeChart = __decorate([
     (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.customElement)('lit-timechart')
 ], TimeChart);
@@ -1098,6 +1185,11 @@ let Session = class Session extends lit__WEBPACK_IMPORTED_MODULE_0__.LitElement 
     _msToVh(ms) {
         return _constants__WEBPACK_IMPORTED_MODULE_3__.hourToVh * ms / 1000 / 60 / 60;
     }
+    _hoursToString(hours) {
+        let numHours = Math.floor(hours);
+        let numMinutes = Math.floor((hours - numHours) * 60);
+        return `${numHours}h ${numMinutes}m`;
+    }
     render() {
         // To add the positioning info
         const inlineStyle = `
@@ -1111,7 +1203,9 @@ let Session = class Session extends lit__WEBPACK_IMPORTED_MODULE_0__.LitElement 
                 @mouseenter=${this._onMouseEnter}
                 @click=${this._onClick}
             >
-
+                <div class="duration">
+                    ${this._hoursToString((this.end - this.start) / 1000 / 60 / 60)}
+                </div>
             </div>
         `;
     }
@@ -1154,7 +1248,9 @@ const styles = (0,lit__WEBPACK_IMPORTED_MODULE_0__.css) `
 .session {
     --trans-time: 0.3s;
 
-    display: block;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     box-sizing: border-box;
     width: 100%;
     position: absolute;
@@ -1171,6 +1267,12 @@ const styles = (0,lit__WEBPACK_IMPORTED_MODULE_0__.css) `
 .session.selected {
     box-shadow: 4px 2px 4px rgba(0, 0, 0, 0.3);
     background-color: darkorange;
+}
+
+.duration {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: black
 }
     
 `;
