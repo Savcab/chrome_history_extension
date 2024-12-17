@@ -5,15 +5,11 @@ import { ActivitySession, Tab, TabTimestamp } from '../types';
 import '../userHistory/userHistory';
 import '../sessionDetails/sessionDetails';
 import '../timechart/timechart';
+import { minTabSeshLength, minActiveSeshGap } from '../constants';
 
 @customElement('lit-page')
 class Page extends LitElement {
-
-    // Constants
-    private _minTabSeshLength = 2; // in minutes
-    private _minActiveSeshGap = 15; // in minutes
-
-
+    
     static styles: CSSResultGroup = styles;
 
     @state()
@@ -50,7 +46,6 @@ class Page extends LitElement {
         this._intervalId = window.setInterval(() => this._upateStatesMinutely(), 1000 * 60);
         if (window.location.hostname !== "localhost") {
             let {currScreentime, currTabHistory, active, currSesh, currDate} = await chrome.storage.local.get(["currScreentime", "currTabHistory", "active", "currSesh", "currDate"]);
-            this._setTabHistory(currTabHistory);
             this._active = active;
             this._date = currDate;
             if(active) {
@@ -60,6 +55,7 @@ class Page extends LitElement {
                 })
             }
             this._setSessions(currScreentime);
+            this._setTabHistory(currTabHistory);
         } else {
             // Localhost testing
             this._setSessions([
@@ -136,16 +132,28 @@ class Page extends LitElement {
         console.log("this._sessions: ", this._sessions);
     }
 
+    // Dependant on this._sessions
     // To do some data transforamtion before setting _tabHistory. Currently the things it does are:
-    //      remove tab sessions that are less than this._minTabSeshLength
+    //      remove tab sessions that are less than minTabSeshLength
+    //          The last tab and first tab of every session are immune to this
     //      remove tab sessions next to each other that have the same url
     private _setTabHistory(tabHistory: TabTimestamp[]) {
         let filtered: TabTimestamp[] = [];
-        // Remove tab sessions that are less than this._minTabSeshLength
-        // Include last tab no matter what
+        // Remove tab sessions that are less than minTabSeshLength
+        // The last tab and first tab of every session are immune to this
+        let sessionsIdx = 0;
+        let immune = false;
         for (let i = 0; i < tabHistory.length - 1; i++) {
-            if (tabHistory[i+1].timestamp - tabHistory[i].timestamp >= this._minTabSeshLength * 60 * 1000) {
+            // If this is the first tab of a session
+            if (sessionsIdx < this._sessions.length && tabHistory[i].timestamp >= this._sessions[sessionsIdx].start) {
+                immune = true;
+                sessionsIdx += 1;
+            }
+
+            // If immune or the time difference is greater than the minTabSeshLength
+            if (immune || tabHistory[i+1].timestamp - tabHistory[i].timestamp >= minTabSeshLength * 60 * 1000) {
                 filtered.push(tabHistory[i]);
+                immune = false;
             }
         }
         filtered.push(tabHistory[tabHistory.length - 1]);
@@ -161,7 +169,7 @@ class Page extends LitElement {
     }
 
     // To do some data transformation before setting _session. Currently the things it does are:
-    //      merge sessions taht are less that this._minactiveSeshGap minutes apart
+    //      merge sessions that are less that minactiveSeshGap minutes apart
     private _setSessions(activeSessions: ActivitySession[]) {
         // Edge case: empty list
         if (activeSessions.length === 0) {
@@ -171,7 +179,7 @@ class Page extends LitElement {
         const filtered: ActivitySession[] = [];
         let currSesh = activeSessions[0];
         for (let sesh of activeSessions) {
-            if (sesh.start - currSesh.end <= this._minActiveSeshGap * 60 * 1000) {
+            if (sesh.start - currSesh.end <= minActiveSeshGap * 60 * 1000) {
                 currSesh.end = sesh.end;
             } else {
                 filtered.push(currSesh);

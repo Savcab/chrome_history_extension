@@ -2,7 +2,7 @@ import { CSSResultGroup, html, LitElement } from "lit";
 import { customElement, property } from 'lit/decorators.js';
 import { styles } from './style';
 import { ActivitySession, TabTimestamp, Tab, TimeSlot } from '../../types';
-import { hourToVh } from "../constants";
+import { sessiondetails__hourToVh } from "../../constants";
 
 
 
@@ -29,7 +29,7 @@ class TabSession extends LitElement {
      * HELPER FUNCTIONS 
      */
     private _msToVh(ms: number): number {
-        return hourToVh * ms / 1000 / 60 / 60;
+        return sessiondetails__hourToVh * ms / 1000 / 60 / 60;
     }
 
 

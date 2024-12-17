@@ -3,7 +3,7 @@ import { customElement, property, state } from 'lit/decorators.js';
 import {styles} from './style'
 import { ActivitySession, TimeSlot } from '../types';
 import { styleMap } from 'lit/directives/style-map';
-import { hourToVh, timeslotsPerHour } from './constants';
+import { userhistory__hourToVh, userhistory__timeslotsPerHour } from '../constants';
 import './session/session';
 
 @customElement('lit-user-history')
@@ -85,7 +85,7 @@ class UserHistory extends LitElement {
     }
 
     private _createPresentBarHtml(): TemplateResult {
-        const minToVh = (min: number) => min / 60 * hourToVh;
+        const minToVh = (min: number) => min / 60 * userhistory__hourToVh;
         const inlineStyle = `top: ${minToVh(this.currRelMinute)}vh;`;
         return html`
             <div class="present-bar" style=${inlineStyle}>
@@ -110,7 +110,7 @@ class UserHistory extends LitElement {
     render() {
         let timeslots: TimeSlot[] = []
         for (let i = 0; i < 24; i++) {
-            for (let j = 0; j < timeslotsPerHour; j++) {
+            for (let j = 0; j < userhistory__timeslotsPerHour; j++) {
                 timeslots.push({hour: i, part: j});
             }
         }
@@ -126,7 +126,7 @@ class UserHistory extends LitElement {
                             <!-- The Timeslot templates -->
                             ${timeslots.map((timeslot) => {
                                 return html`
-                                    <div class="timeslot ${timeslot.part === 0 ? 'hour-start' : ''} ${timeslot.part === timeslotsPerHour-1 ? 'hour-end' : ''}">
+                                    <div class="timeslot ${timeslot.part === 0 ? 'hour-start' : ''} ${timeslot.part === userhistory__timeslotsPerHour-1 ? 'hour-end' : ''}">
                                         ${ (timeslot.part === 0) ? 
                                             html`<div class="timestamp">
                                                     ${this._getTimestampText(timeslot.hour)}

@@ -2,7 +2,7 @@ import { LitElement, html, css, CSSResultGroup, TemplateResult } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { ActivitySession, Tab, TabTimestamp, TimeSlot } from '../types';
 import { styles } from './style';
-import { hourToVh, timeslotsPerHour } from './constants';
+import { sessiondetails__timeslotsPerHour, minTabSeshLength } from '../constants';
 import './tabSession/tabSession';
 
 @customElement('lit-session-details')
@@ -30,6 +30,23 @@ class SessionDetails extends LitElement {
         const currTabTimestamps: TabTimestamp[] = this.tabHistory.filter(tab => (tab.timestamp >= session.start && tab.timestamp <= session.end));
         // tabSessions are tabs with start and end dates
         const tabSessions: Tab [] = [];
+        // If the session was started by user interaction, not by change of tab. 
+        // AND if that tabSession lasts for longer than 1 minute before switching tabs, include that session
+        if (currTabTimestamps.length !== 0 && session.start < currTabTimestamps[0].timestamp - minTabSeshLength * 60 * 1000) {
+            // Find the previous tab, if it exists
+            const prevTab = this.tabHistory.filter(tab => tab.timestamp < session.start).pop();
+            if (prevTab) {
+                tabSessions.push({
+                    url: prevTab.url,
+                    start: session.start,
+                    end: currTabTimestamps[0].timestamp,
+                    favIconUrl: prevTab.favIconUrl,
+                    title: prevTab.title
+                });
+            }
+        }
+
+        // Add the rest of the tabSessions
         for (let idx = 0; idx < currTabTimestamps.length; idx++) {
             // The start of the next tab, if it's the last one, the end of this activity session
             const endTimestamp = idx !== currTabTimestamps.length - 1 ? 
@@ -55,7 +72,7 @@ class SessionDetails extends LitElement {
         let ans = "";
         ans += `${hour <= 12 ? hour : hour - 12}`;
         if (part !== 0) {
-            ans += `:${part * Math.floor(60 / timeslotsPerHour)}`;
+            ans += `:${part * Math.floor(60 / sessiondetails__timeslotsPerHour)}`;
         }
         ans += hour < 12 ? " AM" : " PM";
 
@@ -77,7 +94,7 @@ class SessionDetails extends LitElement {
             const relEndEpoch = this._getRelMs(session.end);
 
             const msPerHour = 1000 * 60 * 60;
-            const msPerSubhour = msPerHour / timeslotsPerHour;
+            const msPerSubhour = msPerHour / sessiondetails__timeslotsPerHour;
 
             const startHour = Math.floor(relStartEpoch / msPerHour);
             const startSubhour = Math.floor((relStartEpoch % msPerHour) / msPerSubhour);
@@ -91,21 +108,21 @@ class SessionDetails extends LitElement {
             while (currHour < endHour || (currHour === endHour && currSubHour <= endSubhour)) {
                 timeslots.push({hour: currHour, part: currSubHour});
                 currSubHour++;
-                if (currSubHour === timeslotsPerHour) {
+                if (currSubHour === sessiondetails__timeslotsPerHour) {
                     currSubHour = 0;
                     currHour++;
                 }
             }
             // For the last timestamp at the bottom of the calendar
-            let lastHour = endHour + Math.floor((endSubhour + 1) / timeslotsPerHour);
-            let lastSubhour = (endSubhour + 1) % timeslotsPerHour;
+            let lastHour = endHour + Math.floor((endSubhour + 1) / sessiondetails__timeslotsPerHour);
+            let lastSubhour = (endSubhour + 1) % sessiondetails__timeslotsPerHour;
 
             return html`
                 <div class="sesh-timeline-scrolling-container">
                     <div class="sesh-timeline">
                         <!-- The Timeslot template -->
                         ${timeslots.map((timeslot) => html`
-                            <div class="timeslot ${timeslot.part === 0 ? 'hour-start' : ''} ${timeslot.part === timeslotsPerHour - 1 ? 'hour-end' : ''}">
+                            <div class="timeslot ${timeslot.part === 0 ? 'hour-start' : ''} ${timeslot.part === sessiondetails__timeslotsPerHour - 1 ? 'hour-end' : ''}">
                                 <div class="timestamp ${timeslot.part === 0 ? 'primary': 'secondary'}}">
                                     ${this._getTimestampText(timeslot.hour, timeslot.part)}
                                 </div>

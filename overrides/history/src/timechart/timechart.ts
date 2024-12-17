@@ -23,60 +23,39 @@ class TimeChart extends LitElement {
      * HELPER FUNCTIONS 
      */
     private _calculateDomainTimes() {
-        // Sanity test
-        console.log("HERE IN CALCULATE DOMAIN TIME");
-        let sumTime = 0;
-        for (let sesh of this.sessions) {
-            sumTime += sesh.end - sesh.start;
-        }
-        sumTime /= (1000 * 60 * 60);
-        console.log("Total time:", sumTime);
-        console.log("sessions:", this.sessions);
-        console.log("tabHistory:", this.tabHistory);
-
-
         const domainsScreentime: Map<string, number> = new Map();
         let seshIdx = 0;
         let tabIdx = 0;
+        let prevSeshIdx = -1; // Used to check during the whileloop if the current tab is the first tab in the session
         while (seshIdx != this.sessions.length && tabIdx != this.tabHistory.length) {
             const tab = this.tabHistory[tabIdx];
             const sesh = this.sessions[seshIdx];
-            console.log("tab:", new Date(tab.timestamp).toLocaleDateString('en-US', {
-                hour: 'numeric',
-                minute: 'numeric',
-                hour12: false
-            }));
-            console.log("sesh start:", new Date(sesh.start).toLocaleDateString('en-US', {
-                hour: 'numeric',
-                minute: 'numeric',
-                hour12: false
-            }));
-            console.log("sesh end:", new Date(sesh.end).toLocaleDateString('en-US', {
-                hour: 'numeric',
-                minute: 'numeric',
-                hour12: false
-            }));
             // If this tabTimestamp is before the session
             if (tab.timestamp < sesh.start) {
                 tabIdx++;
-                console.log("HERE IN INCREAES TABIDX");
             // If this tabTimestamp is after the session
             } else if (tab.timestamp > sesh.end) {
                 seshIdx++;
-                console.log("HERE IN INCREAES SESHIDX");
             // If this tabTimestamp is within the session
             } else {
+                // If this is the first tab in this session, include the time from the start of the session to this tab
+                if (prevSeshIdx !== seshIdx) {
+                    prevSeshIdx = seshIdx;
+                    const prevTab = this.tabHistory.filter(tab => tab.timestamp < sesh.start).pop();
+                    if (prevTab) {
+                        const domain = this._getDomain(prevTab.url);
+                        domainsScreentime.set(domain, (domainsScreentime.get(domain) ?? 0) + (tab.timestamp - sesh.start));
+                    }
+                }
+                // Calculate the duration of this tab
                 const domain = this._getDomain(tab.url);
                 const nextTabTime = tabIdx + 1 < this.tabHistory.length ? this.tabHistory[tabIdx + 1].timestamp : Infinity;
                 const duration = Math.min(nextTabTime, sesh.end) - tab.timestamp;
                 // Update the mapping
-                domainsScreentime.set(domain, domainsScreentime.get(domain) ?? 0 + duration);
+                domainsScreentime.set(domain, (domainsScreentime.get(domain) ?? 0) + duration);
                 tabIdx++;
-                console.log("TAB IS WITHIN SESSION")
             }
         }
-        console.log("CALCULATED DOMAIN SCREENTIME");
-        console.log("Domain screentime:", domainsScreentime);
         return domainsScreentime;
     }
 
@@ -85,7 +64,7 @@ class TimeChart extends LitElement {
             const parsedUrl = new URL(url);
             return parsedUrl.hostname;
         } catch (error) {
-            // console.error("Invalid URL:", error);
+            console.error("Invalid URL:", url);
             return url;
         }
     }
@@ -100,7 +79,6 @@ class TimeChart extends LitElement {
      * EVENT HANDLERS 
      */
     private _onDisplayTopChange(event: Event) {
-        console.log(event);
         this.displayTop = parseInt((event.target as HTMLSelectElement).value);
     }
 
@@ -110,9 +88,6 @@ class TimeChart extends LitElement {
         const domainsScreentime = this._calculateDomainTimes();
         const domainsSorted = Array.from(domainsScreentime.keys());
         domainsSorted.sort((a, b) => (domainsScreentime.get(b) ?? 0) - (domainsScreentime.get(a) ?? 0));
-        console.log("SORTED DOMAINS");
-        console.log(domainsSorted);
-
         // Create data for the chart
         let items: ChartItem[] = [];
         for (let domain of domainsSorted) {

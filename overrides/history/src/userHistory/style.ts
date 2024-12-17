@@ -1,5 +1,5 @@
 import { css } from "lit";
-import { hourToVh, timeslotsPerHour } from "./constants";
+import { userhistory__hourToVh, userhistory__timeslotsPerHour } from "../constants";
 
 export const styles = css`
 
@@ -40,7 +40,7 @@ export const styles = css`
     box-sizing: border-box;
     margin: 15px;
     width: 80%;
-    height: ${24 * hourToVh}vh;
+    height: ${24 * userhistory__hourToVh}vh;
     margin-left: 10%;
     position: relative;
 }
@@ -50,7 +50,7 @@ export const styles = css`
     border: 1px rgb(220, 220, 220) solid;
     border-left: 1px solid black;
     border-right: 1px solid black;
-    height: ${1 / timeslotsPerHour * hourToVh}vh;
+    height: ${1 / userhistory__timeslotsPerHour * userhistory__hourToVh}vh;
 }
 
 .timeslot.hour-start {

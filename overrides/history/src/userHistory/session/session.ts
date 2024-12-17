@@ -1,7 +1,7 @@
 import { LitElement, html, css, CSSResult, CSSResultGroup, TemplateResult } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import {styles} from './style'
-import { hourToVh } from '../constants';
+import { userhistory__hourToVh } from '../../constants';
 
 @customElement('lit-user-history-session')
 export class Session extends LitElement {
@@ -51,7 +51,7 @@ export class Session extends LitElement {
      * HELPER FUNCTIONS 
      */
     private _msToVh(ms: number): number {
-        return hourToVh * ms / 1000 / 60 / 60;
+        return userhistory__hourToVh * ms / 1000 / 60 / 60;
     }
 
     private _hoursToString(hours: number): string {

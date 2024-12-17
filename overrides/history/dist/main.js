@@ -2,6 +2,40 @@
 /******/ 	"use strict";
 /******/ 	var __webpack_modules__ = ({
 
+/***/ "./src/constants.ts":
+/*!**************************!*\
+  !*** ./src/constants.ts ***!
+  \**************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   minActiveSeshGap: () => (/* binding */ minActiveSeshGap),
+/* harmony export */   minTabSeshLength: () => (/* binding */ minTabSeshLength),
+/* harmony export */   sessiondetails__hourToVh: () => (/* binding */ sessiondetails__hourToVh),
+/* harmony export */   sessiondetails__timeslotsPerHour: () => (/* binding */ sessiondetails__timeslotsPerHour),
+/* harmony export */   userhistory__hourToVh: () => (/* binding */ userhistory__hourToVh),
+/* harmony export */   userhistory__timeslotsPerHour: () => (/* binding */ userhistory__timeslotsPerHour)
+/* harmony export */ });
+/**
+ * Global
+ */
+const minTabSeshLength = 1; // in minutes
+const minActiveSeshGap = 15; // in minutes
+/**
+ * SessionDetails
+ */
+const sessiondetails__hourToVh = 50 / 1; // Every 50vh represents 1 hour
+const sessiondetails__timeslotsPerHour = 4;
+/**
+ * UserHistory
+ */
+const userhistory__hourToVh = 100 / 12; // Every 100vh represents 12 hours
+const userhistory__timeslotsPerHour = 2;
+
+
+/***/ }),
+
 /***/ "./src/page/page.ts":
 /*!**************************!*\
   !*** ./src/page/page.ts ***!
@@ -15,6 +49,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _userHistory_userHistory__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../userHistory/userHistory */ "./src/userHistory/userHistory.ts");
 /* harmony import */ var _sessionDetails_sessionDetails__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../sessionDetails/sessionDetails */ "./src/sessionDetails/sessionDetails.ts");
 /* harmony import */ var _timechart_timechart__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../timechart/timechart */ "./src/timechart/timechart.ts");
+/* harmony import */ var _constants__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../constants */ "./src/constants.ts");
 var __decorate = (undefined && undefined.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -27,12 +62,10 @@ var __decorate = (undefined && undefined.__decorate) || function (decorators, ta
 
 
 
+
 let Page = class Page extends _node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.LitElement {
     constructor() {
         super(...arguments);
-        // Constants
-        this._minTabSeshLength = 2; // in minutes
-        this._minActiveSeshGap = 15; // in minutes
         this._date = new Date().toDateString();
         // NOTE: this state MUST be updated using _setSessions method
         this._sessions = [];
@@ -54,7 +87,6 @@ let Page = class Page extends _node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.Lit
         this._intervalId = window.setInterval(() => this._upateStatesMinutely(), 1000 * 60);
         if (window.location.hostname !== "localhost") {
             let { currScreentime, currTabHistory, active, currSesh, currDate } = await chrome.storage.local.get(["currScreentime", "currTabHistory", "active", "currSesh", "currDate"]);
-            this._setTabHistory(currTabHistory);
             this._active = active;
             this._date = currDate;
             if (active) {
@@ -64,6 +96,7 @@ let Page = class Page extends _node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.Lit
                 });
             }
             this._setSessions(currScreentime);
+            this._setTabHistory(currTabHistory);
         }
         else {
             // Localhost testing
@@ -133,16 +166,27 @@ let Page = class Page extends _node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.Lit
         // DEBUG
         console.log("this._sessions: ", this._sessions);
     }
+    // Dependant on this._sessions
     // To do some data transforamtion before setting _tabHistory. Currently the things it does are:
-    //      remove tab sessions that are less than this._minTabSeshLength
+    //      remove tab sessions that are less than minTabSeshLength
+    //          The last tab and first tab of every session are immune to this
     //      remove tab sessions next to each other that have the same url
     _setTabHistory(tabHistory) {
         let filtered = [];
-        // Remove tab sessions that are less than this._minTabSeshLength
-        // Include last tab no matter what
+        // Remove tab sessions that are less than minTabSeshLength
+        // The last tab and first tab of every session are immune to this
+        let sessionsIdx = 0;
+        let immune = false;
         for (let i = 0; i < tabHistory.length - 1; i++) {
-            if (tabHistory[i + 1].timestamp - tabHistory[i].timestamp >= this._minTabSeshLength * 60 * 1000) {
+            // If this is the first tab of a session
+            if (sessionsIdx < this._sessions.length && tabHistory[i].timestamp >= this._sessions[sessionsIdx].start) {
+                immune = true;
+                sessionsIdx += 1;
+            }
+            // If immune or the time difference is greater than the minTabSeshLength
+            if (immune || tabHistory[i + 1].timestamp - tabHistory[i].timestamp >= _constants__WEBPACK_IMPORTED_MODULE_6__.minTabSeshLength * 60 * 1000) {
                 filtered.push(tabHistory[i]);
+                immune = false;
             }
         }
         filtered.push(tabHistory[tabHistory.length - 1]);
@@ -155,7 +199,7 @@ let Page = class Page extends _node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.Lit
         this._tabHistory = filtered;
     }
     // To do some data transformation before setting _session. Currently the things it does are:
-    //      merge sessions taht are less that this._minactiveSeshGap minutes apart
+    //      merge sessions that are less that minactiveSeshGap minutes apart
     _setSessions(activeSessions) {
         // Edge case: empty list
         if (activeSessions.length === 0) {
@@ -165,7 +209,7 @@ let Page = class Page extends _node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.Lit
         const filtered = [];
         let currSesh = activeSessions[0];
         for (let sesh of activeSessions) {
-            if (sesh.start - currSesh.end <= this._minActiveSeshGap * 60 * 1000) {
+            if (sesh.start - currSesh.end <= _constants__WEBPACK_IMPORTED_MODULE_6__.minActiveSeshGap * 60 * 1000) {
                 currSesh.end = sesh.end;
             }
             else {
@@ -286,25 +330,6 @@ const styles = (0,lit__WEBPACK_IMPORTED_MODULE_0__.css) `
 
 /***/ }),
 
-/***/ "./src/sessionDetails/constants.ts":
-/*!*****************************************!*\
-  !*** ./src/sessionDetails/constants.ts ***!
-  \*****************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   hourToVh: () => (/* binding */ hourToVh),
-/* harmony export */   timeslotsPerHour: () => (/* binding */ timeslotsPerHour)
-/* harmony export */ });
-// Every 100vh represents 12
-const hourToVh = 50 / 1;
-// Number of timeslots per hour
-const timeslotsPerHour = 4;
-
-
-/***/ }),
-
 /***/ "./src/sessionDetails/sessionDetails.ts":
 /*!**********************************************!*\
   !*** ./src/sessionDetails/sessionDetails.ts ***!
@@ -315,7 +340,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var lit__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! lit */ "./node_modules/lit/index.js");
 /* harmony import */ var lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! lit/decorators.js */ "./node_modules/lit/decorators.js");
 /* harmony import */ var _style__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./style */ "./src/sessionDetails/style.ts");
-/* harmony import */ var _constants__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./constants */ "./src/sessionDetails/constants.ts");
+/* harmony import */ var _constants__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../constants */ "./src/constants.ts");
 /* harmony import */ var _tabSession_tabSession__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./tabSession/tabSession */ "./src/sessionDetails/tabSession/tabSession.ts");
 var __decorate = (undefined && undefined.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -344,6 +369,22 @@ let SessionDetails = class SessionDetails extends lit__WEBPACK_IMPORTED_MODULE_0
         const currTabTimestamps = this.tabHistory.filter(tab => (tab.timestamp >= session.start && tab.timestamp <= session.end));
         // tabSessions are tabs with start and end dates
         const tabSessions = [];
+        // If the session was started by user interaction, not by change of tab. 
+        // AND if that tabSession lasts for longer than 1 minute before switching tabs, include that session
+        if (currTabTimestamps.length !== 0 && session.start < currTabTimestamps[0].timestamp - _constants__WEBPACK_IMPORTED_MODULE_3__.minTabSeshLength * 60 * 1000) {
+            // Find the previous tab, if it exists
+            const prevTab = this.tabHistory.filter(tab => tab.timestamp < session.start).pop();
+            if (prevTab) {
+                tabSessions.push({
+                    url: prevTab.url,
+                    start: session.start,
+                    end: currTabTimestamps[0].timestamp,
+                    favIconUrl: prevTab.favIconUrl,
+                    title: prevTab.title
+                });
+            }
+        }
+        // Add the rest of the tabSessions
         for (let idx = 0; idx < currTabTimestamps.length; idx++) {
             // The start of the next tab, if it's the last one, the end of this activity session
             const endTimestamp = idx !== currTabTimestamps.length - 1 ?
@@ -367,7 +408,7 @@ let SessionDetails = class SessionDetails extends lit__WEBPACK_IMPORTED_MODULE_0
         let ans = "";
         ans += `${hour <= 12 ? hour : hour - 12}`;
         if (part !== 0) {
-            ans += `:${part * Math.floor(60 / _constants__WEBPACK_IMPORTED_MODULE_3__.timeslotsPerHour)}`;
+            ans += `:${part * Math.floor(60 / _constants__WEBPACK_IMPORTED_MODULE_3__.sessiondetails__timeslotsPerHour)}`;
         }
         ans += hour < 12 ? " AM" : " PM";
         return ans;
@@ -385,7 +426,7 @@ let SessionDetails = class SessionDetails extends lit__WEBPACK_IMPORTED_MODULE_0
             const relStartEpoch = this._getRelMs(session.start);
             const relEndEpoch = this._getRelMs(session.end);
             const msPerHour = 1000 * 60 * 60;
-            const msPerSubhour = msPerHour / _constants__WEBPACK_IMPORTED_MODULE_3__.timeslotsPerHour;
+            const msPerSubhour = msPerHour / _constants__WEBPACK_IMPORTED_MODULE_3__.sessiondetails__timeslotsPerHour;
             const startHour = Math.floor(relStartEpoch / msPerHour);
             const startSubhour = Math.floor((relStartEpoch % msPerHour) / msPerSubhour);
             const endHour = Math.floor(relEndEpoch / msPerHour);
@@ -397,20 +438,20 @@ let SessionDetails = class SessionDetails extends lit__WEBPACK_IMPORTED_MODULE_0
             while (currHour < endHour || (currHour === endHour && currSubHour <= endSubhour)) {
                 timeslots.push({ hour: currHour, part: currSubHour });
                 currSubHour++;
-                if (currSubHour === _constants__WEBPACK_IMPORTED_MODULE_3__.timeslotsPerHour) {
+                if (currSubHour === _constants__WEBPACK_IMPORTED_MODULE_3__.sessiondetails__timeslotsPerHour) {
                     currSubHour = 0;
                     currHour++;
                 }
             }
             // For the last timestamp at the bottom of the calendar
-            let lastHour = endHour + Math.floor((endSubhour + 1) / _constants__WEBPACK_IMPORTED_MODULE_3__.timeslotsPerHour);
-            let lastSubhour = (endSubhour + 1) % _constants__WEBPACK_IMPORTED_MODULE_3__.timeslotsPerHour;
+            let lastHour = endHour + Math.floor((endSubhour + 1) / _constants__WEBPACK_IMPORTED_MODULE_3__.sessiondetails__timeslotsPerHour);
+            let lastSubhour = (endSubhour + 1) % _constants__WEBPACK_IMPORTED_MODULE_3__.sessiondetails__timeslotsPerHour;
             return (0,lit__WEBPACK_IMPORTED_MODULE_0__.html) `
                 <div class="sesh-timeline-scrolling-container">
                     <div class="sesh-timeline">
                         <!-- The Timeslot template -->
                         ${timeslots.map((timeslot) => (0,lit__WEBPACK_IMPORTED_MODULE_0__.html) `
-                            <div class="timeslot ${timeslot.part === 0 ? 'hour-start' : ''} ${timeslot.part === _constants__WEBPACK_IMPORTED_MODULE_3__.timeslotsPerHour - 1 ? 'hour-end' : ''}">
+                            <div class="timeslot ${timeslot.part === 0 ? 'hour-start' : ''} ${timeslot.part === _constants__WEBPACK_IMPORTED_MODULE_3__.sessiondetails__timeslotsPerHour - 1 ? 'hour-end' : ''}">
                                 <div class="timestamp ${timeslot.part === 0 ? 'primary' : 'secondary'}}">
                                     ${this._getTimestampText(timeslot.hour, timeslot.part)}
                                 </div>
@@ -485,7 +526,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   styles: () => (/* binding */ styles)
 /* harmony export */ });
 /* harmony import */ var lit__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! lit */ "./node_modules/lit/index.js");
-/* harmony import */ var _constants__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./constants */ "./src/sessionDetails/constants.ts");
+/* harmony import */ var _constants__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../constants */ "./src/constants.ts");
 
 
 const styles = (0,lit__WEBPACK_IMPORTED_MODULE_0__.css) `
@@ -534,7 +575,7 @@ const styles = (0,lit__WEBPACK_IMPORTED_MODULE_0__.css) `
     border: 1px rgb(220, 220, 220) solid;
     border-left: 1px solid black;
     border-right: 1px solid black;
-    height: ${1 / _constants__WEBPACK_IMPORTED_MODULE_1__.timeslotsPerHour * _constants__WEBPACK_IMPORTED_MODULE_1__.hourToVh}vh;
+    height: ${1 / _constants__WEBPACK_IMPORTED_MODULE_1__.sessiondetails__timeslotsPerHour * _constants__WEBPACK_IMPORTED_MODULE_1__.sessiondetails__hourToVh}vh;
 }
 
 .timeslot.hour-start {
@@ -616,7 +657,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var lit__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! lit */ "./node_modules/lit/index.js");
 /* harmony import */ var lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! lit/decorators.js */ "./node_modules/lit/decorators.js");
 /* harmony import */ var _style__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./style */ "./src/sessionDetails/tabSession/style.ts");
-/* harmony import */ var _constants__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../constants */ "./src/sessionDetails/constants.ts");
+/* harmony import */ var _constants__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../constants */ "./src/constants.ts");
 var __decorate = (undefined && undefined.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -640,7 +681,7 @@ let TabSession = class TabSession extends lit__WEBPACK_IMPORTED_MODULE_0__.LitEl
      * HELPER FUNCTIONS
      */
     _msToVh(ms) {
-        return _constants__WEBPACK_IMPORTED_MODULE_3__.hourToVh * ms / 1000 / 60 / 60;
+        return _constants__WEBPACK_IMPORTED_MODULE_3__.sessiondetails__hourToVh * ms / 1000 / 60 / 60;
     }
     render() {
         const urlText = this.url ? this.url : "chrome://newtab/";
@@ -965,61 +1006,42 @@ let TimeChart = class TimeChart extends lit__WEBPACK_IMPORTED_MODULE_0__.LitElem
      * HELPER FUNCTIONS
      */
     _calculateDomainTimes() {
-        var _a;
-        // Sanity test
-        console.log("HERE IN CALCULATE DOMAIN TIME");
-        let sumTime = 0;
-        for (let sesh of this.sessions) {
-            sumTime += sesh.end - sesh.start;
-        }
-        sumTime /= (1000 * 60 * 60);
-        console.log("Total time:", sumTime);
-        console.log("sessions:", this.sessions);
-        console.log("tabHistory:", this.tabHistory);
+        var _a, _b;
         const domainsScreentime = new Map();
         let seshIdx = 0;
         let tabIdx = 0;
+        let prevSeshIdx = -1; // Used to check during the whileloop if the current tab is the first tab in the session
         while (seshIdx != this.sessions.length && tabIdx != this.tabHistory.length) {
             const tab = this.tabHistory[tabIdx];
             const sesh = this.sessions[seshIdx];
-            console.log("tab:", new Date(tab.timestamp).toLocaleDateString('en-US', {
-                hour: 'numeric',
-                minute: 'numeric',
-                hour12: false
-            }));
-            console.log("sesh start:", new Date(sesh.start).toLocaleDateString('en-US', {
-                hour: 'numeric',
-                minute: 'numeric',
-                hour12: false
-            }));
-            console.log("sesh end:", new Date(sesh.end).toLocaleDateString('en-US', {
-                hour: 'numeric',
-                minute: 'numeric',
-                hour12: false
-            }));
             // If this tabTimestamp is before the session
             if (tab.timestamp < sesh.start) {
                 tabIdx++;
-                console.log("HERE IN INCREAES TABIDX");
                 // If this tabTimestamp is after the session
             }
             else if (tab.timestamp > sesh.end) {
                 seshIdx++;
-                console.log("HERE IN INCREAES SESHIDX");
                 // If this tabTimestamp is within the session
             }
             else {
+                // If this is the first tab in this session, include the time from the start of the session to this tab
+                if (prevSeshIdx !== seshIdx) {
+                    prevSeshIdx = seshIdx;
+                    const prevTab = this.tabHistory.filter(tab => tab.timestamp < sesh.start).pop();
+                    if (prevTab) {
+                        const domain = this._getDomain(prevTab.url);
+                        domainsScreentime.set(domain, ((_a = domainsScreentime.get(domain)) !== null && _a !== void 0 ? _a : 0) + (tab.timestamp - sesh.start));
+                    }
+                }
+                // Calculate the duration of this tab
                 const domain = this._getDomain(tab.url);
                 const nextTabTime = tabIdx + 1 < this.tabHistory.length ? this.tabHistory[tabIdx + 1].timestamp : Infinity;
                 const duration = Math.min(nextTabTime, sesh.end) - tab.timestamp;
                 // Update the mapping
-                domainsScreentime.set(domain, (_a = domainsScreentime.get(domain)) !== null && _a !== void 0 ? _a : 0 + duration);
+                domainsScreentime.set(domain, ((_b = domainsScreentime.get(domain)) !== null && _b !== void 0 ? _b : 0) + duration);
                 tabIdx++;
-                console.log("TAB IS WITHIN SESSION");
             }
         }
-        console.log("CALCULATED DOMAIN SCREENTIME");
-        console.log("Domain screentime:", domainsScreentime);
         return domainsScreentime;
     }
     _getDomain(url) {
@@ -1028,7 +1050,7 @@ let TimeChart = class TimeChart extends lit__WEBPACK_IMPORTED_MODULE_0__.LitElem
             return parsedUrl.hostname;
         }
         catch (error) {
-            // console.error("Invalid URL:", error);
+            console.error("Invalid URL:", url);
             return url;
         }
     }
@@ -1041,7 +1063,6 @@ let TimeChart = class TimeChart extends lit__WEBPACK_IMPORTED_MODULE_0__.LitElem
      * EVENT HANDLERS
      */
     _onDisplayTopChange(event) {
-        console.log(event);
         this.displayTop = parseInt(event.target.value);
     }
     render() {
@@ -1050,8 +1071,6 @@ let TimeChart = class TimeChart extends lit__WEBPACK_IMPORTED_MODULE_0__.LitElem
         const domainsScreentime = this._calculateDomainTimes();
         const domainsSorted = Array.from(domainsScreentime.keys());
         domainsSorted.sort((a, b) => { var _a, _b; return ((_a = domainsScreentime.get(b)) !== null && _a !== void 0 ? _a : 0) - ((_b = domainsScreentime.get(a)) !== null && _b !== void 0 ? _b : 0); });
-        console.log("SORTED DOMAINS");
-        console.log(domainsSorted);
         // Create data for the chart
         let items = [];
         for (let domain of domainsSorted) {
@@ -1103,25 +1122,6 @@ TimeChart = __decorate([
 
 /***/ }),
 
-/***/ "./src/userHistory/constants.ts":
-/*!**************************************!*\
-  !*** ./src/userHistory/constants.ts ***!
-  \**************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   hourToVh: () => (/* binding */ hourToVh),
-/* harmony export */   timeslotsPerHour: () => (/* binding */ timeslotsPerHour)
-/* harmony export */ });
-// Every 100vh represents 12
-const hourToVh = 100 / 12;
-// Number of timeslots per hour
-const timeslotsPerHour = 2;
-
-
-/***/ }),
-
 /***/ "./src/userHistory/session/session.ts":
 /*!********************************************!*\
   !*** ./src/userHistory/session/session.ts ***!
@@ -1135,7 +1135,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var lit__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! lit */ "./node_modules/lit/index.js");
 /* harmony import */ var lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! lit/decorators.js */ "./node_modules/lit/decorators.js");
 /* harmony import */ var _style__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./style */ "./src/userHistory/session/style.ts");
-/* harmony import */ var _constants__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../constants */ "./src/userHistory/constants.ts");
+/* harmony import */ var _constants__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../constants */ "./src/constants.ts");
 var __decorate = (undefined && undefined.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -1183,7 +1183,7 @@ let Session = class Session extends lit__WEBPACK_IMPORTED_MODULE_0__.LitElement 
      * HELPER FUNCTIONS
      */
     _msToVh(ms) {
-        return _constants__WEBPACK_IMPORTED_MODULE_3__.hourToVh * ms / 1000 / 60 / 60;
+        return _constants__WEBPACK_IMPORTED_MODULE_3__.userhistory__hourToVh * ms / 1000 / 60 / 60;
     }
     _hoursToString(hours) {
         let numHours = Math.floor(hours);
@@ -1291,7 +1291,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   styles: () => (/* binding */ styles)
 /* harmony export */ });
 /* harmony import */ var lit__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! lit */ "./node_modules/lit/index.js");
-/* harmony import */ var _constants__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./constants */ "./src/userHistory/constants.ts");
+/* harmony import */ var _constants__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../constants */ "./src/constants.ts");
 
 
 const styles = (0,lit__WEBPACK_IMPORTED_MODULE_0__.css) `
@@ -1333,7 +1333,7 @@ const styles = (0,lit__WEBPACK_IMPORTED_MODULE_0__.css) `
     box-sizing: border-box;
     margin: 15px;
     width: 80%;
-    height: ${24 * _constants__WEBPACK_IMPORTED_MODULE_1__.hourToVh}vh;
+    height: ${24 * _constants__WEBPACK_IMPORTED_MODULE_1__.userhistory__hourToVh}vh;
     margin-left: 10%;
     position: relative;
 }
@@ -1343,7 +1343,7 @@ const styles = (0,lit__WEBPACK_IMPORTED_MODULE_0__.css) `
     border: 1px rgb(220, 220, 220) solid;
     border-left: 1px solid black;
     border-right: 1px solid black;
-    height: ${1 / _constants__WEBPACK_IMPORTED_MODULE_1__.timeslotsPerHour * _constants__WEBPACK_IMPORTED_MODULE_1__.hourToVh}vh;
+    height: ${1 / _constants__WEBPACK_IMPORTED_MODULE_1__.userhistory__timeslotsPerHour * _constants__WEBPACK_IMPORTED_MODULE_1__.userhistory__hourToVh}vh;
 }
 
 .timeslot.hour-start {
@@ -1395,7 +1395,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var lit__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! lit */ "./node_modules/lit/index.js");
 /* harmony import */ var lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! lit/decorators.js */ "./node_modules/lit/decorators.js");
 /* harmony import */ var _style__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./style */ "./src/userHistory/style.ts");
-/* harmony import */ var _constants__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./constants */ "./src/userHistory/constants.ts");
+/* harmony import */ var _constants__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../constants */ "./src/constants.ts");
 /* harmony import */ var _session_session__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./session/session */ "./src/userHistory/session/session.ts");
 var __decorate = (undefined && undefined.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -1476,7 +1476,7 @@ let UserHistory = class UserHistory extends lit__WEBPACK_IMPORTED_MODULE_0__.Lit
         }
     }
     _createPresentBarHtml() {
-        const minToVh = (min) => min / 60 * _constants__WEBPACK_IMPORTED_MODULE_3__.hourToVh;
+        const minToVh = (min) => min / 60 * _constants__WEBPACK_IMPORTED_MODULE_3__.userhistory__hourToVh;
         const inlineStyle = `top: ${minToVh(this.currRelMinute)}vh;`;
         return (0,lit__WEBPACK_IMPORTED_MODULE_0__.html) `
             <div class="present-bar" style=${inlineStyle}>
@@ -1500,7 +1500,7 @@ let UserHistory = class UserHistory extends lit__WEBPACK_IMPORTED_MODULE_0__.Lit
     render() {
         let timeslots = [];
         for (let i = 0; i < 24; i++) {
-            for (let j = 0; j < _constants__WEBPACK_IMPORTED_MODULE_3__.timeslotsPerHour; j++) {
+            for (let j = 0; j < _constants__WEBPACK_IMPORTED_MODULE_3__.userhistory__timeslotsPerHour; j++) {
                 timeslots.push({ hour: i, part: j });
             }
         }
@@ -1514,7 +1514,7 @@ let UserHistory = class UserHistory extends lit__WEBPACK_IMPORTED_MODULE_0__.Lit
                             <!-- The Timeslot templates -->
                             ${timeslots.map((timeslot) => {
             return (0,lit__WEBPACK_IMPORTED_MODULE_0__.html) `
-                                    <div class="timeslot ${timeslot.part === 0 ? 'hour-start' : ''} ${timeslot.part === _constants__WEBPACK_IMPORTED_MODULE_3__.timeslotsPerHour - 1 ? 'hour-end' : ''}">
+                                    <div class="timeslot ${timeslot.part === 0 ? 'hour-start' : ''} ${timeslot.part === _constants__WEBPACK_IMPORTED_MODULE_3__.userhistory__timeslotsPerHour - 1 ? 'hour-end' : ''}">
                                         ${(timeslot.part === 0) ?
                 (0,lit__WEBPACK_IMPORTED_MODULE_0__.html) `<div class="timestamp">
                                                     ${this._getTimestampText(timeslot.hour)}

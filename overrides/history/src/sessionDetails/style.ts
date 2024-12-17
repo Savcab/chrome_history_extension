@@ -1,5 +1,5 @@
 import { css } from "lit";
-import { hourToVh, timeslotsPerHour } from "./constants";
+import { sessiondetails__hourToVh, sessiondetails__timeslotsPerHour } from "../constants";
 
 export const styles = css`
 :host {
@@ -47,7 +47,7 @@ export const styles = css`
     border: 1px rgb(220, 220, 220) solid;
     border-left: 1px solid black;
     border-right: 1px solid black;
-    height: ${1 / timeslotsPerHour * hourToVh}vh;
+    height: ${1 / sessiondetails__timeslotsPerHour * sessiondetails__hourToVh}vh;
 }
 
 .timeslot.hour-start {
