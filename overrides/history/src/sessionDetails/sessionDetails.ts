@@ -30,23 +30,6 @@ class SessionDetails extends LitElement {
         const currTabTimestamps: TabTimestamp[] = this.tabHistory.filter(tab => (tab.timestamp >= session.start && tab.timestamp <= session.end));
         // tabSessions are tabs with start and end dates
         const tabSessions: Tab [] = [];
-        // If the session was started by user interaction, not by change of tab. 
-        // AND if that tabSession lasts for longer than 1 minute before switching tabs, include that session
-        if (currTabTimestamps.length !== 0 && session.start < currTabTimestamps[0].timestamp - minTabSeshLength * 60 * 1000) {
-            // Find the previous tab, if it exists
-            const prevTab = this.tabHistory.filter(tab => tab.timestamp < session.start).pop();
-            if (prevTab) {
-                tabSessions.push({
-                    url: prevTab.url,
-                    start: session.start,
-                    end: currTabTimestamps[0].timestamp,
-                    favIconUrl: prevTab.favIconUrl,
-                    title: prevTab.title
-                });
-            }
-        }
-
-        // Add the rest of the tabSessions
         for (let idx = 0; idx < currTabTimestamps.length; idx++) {
             // The start of the next tab, if it's the last one, the end of this activity session
             const endTimestamp = idx !== currTabTimestamps.length - 1 ? 

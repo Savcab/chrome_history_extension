@@ -172,9 +172,9 @@ let Page = class Page extends _node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.Lit
     //          The last tab and first tab of every session are immune to this
     //      remove tab sessions next to each other that have the same url
     _setTabHistory(tabHistory) {
-        let filtered = [];
+        let modified = [];
         // Remove tab sessions that are less than minTabSeshLength
-        // The last tab and first tab of every session are immune to this
+        // The last tab of every session are immune to this
         let sessionsIdx = 0;
         let immune = false;
         for (let i = 0; i < tabHistory.length - 1; i++) {
@@ -185,18 +185,34 @@ let Page = class Page extends _node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.Lit
             }
             // If immune or the time difference is greater than the minTabSeshLength
             if (immune || tabHistory[i + 1].timestamp - tabHistory[i].timestamp >= _constants__WEBPACK_IMPORTED_MODULE_6__.minTabSeshLength * 60 * 1000) {
-                filtered.push(tabHistory[i]);
+                modified.push(tabHistory[i]);
                 immune = false;
             }
         }
-        filtered.push(tabHistory[tabHistory.length - 1]);
+        modified.push(tabHistory[tabHistory.length - 1]);
         // Remove tab sessions next to each other that have the same url
-        for (let i = filtered.length - 1; i > 0; i--) {
-            if (filtered[i].url === filtered[i - 1].url) {
-                filtered.splice(i, 1);
+        for (let i = modified.length - 1; i > 0; i--) {
+            if (modified[i].url === modified[i - 1].url) {
+                modified.splice(i, 1);
             }
         }
-        this._tabHistory = filtered;
+        // Add in previous tabs at the start of each session
+        //      If a sesison is started on the preivously opened tab by user interaction, this captures that
+        //      This also keeps the first tab of every session consistent with session starttime
+        for (let sesh of this._sessions) {
+            const prevTab = tabHistory.filter(tab => tab.timestamp <= sesh.start).pop();
+            if (prevTab) {
+                modified.push({
+                    url: prevTab.url,
+                    timestamp: sesh.start,
+                    favIconUrl: prevTab.favIconUrl,
+                    title: prevTab.title
+                });
+            }
+        }
+        // Resort to keep timestamps in increasing order
+        modified.sort((a, b) => a.timestamp - b.timestamp);
+        this._tabHistory = modified;
     }
     // To do some data transformation before setting _session. Currently the things it does are:
     //      merge sessions that are less that minactiveSeshGap minutes apart
@@ -369,22 +385,6 @@ let SessionDetails = class SessionDetails extends lit__WEBPACK_IMPORTED_MODULE_0
         const currTabTimestamps = this.tabHistory.filter(tab => (tab.timestamp >= session.start && tab.timestamp <= session.end));
         // tabSessions are tabs with start and end dates
         const tabSessions = [];
-        // If the session was started by user interaction, not by change of tab. 
-        // AND if that tabSession lasts for longer than 1 minute before switching tabs, include that session
-        if (currTabTimestamps.length !== 0 && session.start < currTabTimestamps[0].timestamp - _constants__WEBPACK_IMPORTED_MODULE_3__.minTabSeshLength * 60 * 1000) {
-            // Find the previous tab, if it exists
-            const prevTab = this.tabHistory.filter(tab => tab.timestamp < session.start).pop();
-            if (prevTab) {
-                tabSessions.push({
-                    url: prevTab.url,
-                    start: session.start,
-                    end: currTabTimestamps[0].timestamp,
-                    favIconUrl: prevTab.favIconUrl,
-                    title: prevTab.title
-                });
-            }
-        }
-        // Add the rest of the tabSessions
         for (let idx = 0; idx < currTabTimestamps.length; idx++) {
             // The start of the next tab, if it's the last one, the end of this activity session
             const endTimestamp = idx !== currTabTimestamps.length - 1 ?
@@ -1006,11 +1006,10 @@ let TimeChart = class TimeChart extends lit__WEBPACK_IMPORTED_MODULE_0__.LitElem
      * HELPER FUNCTIONS
      */
     _calculateDomainTimes() {
-        var _a, _b;
+        var _a;
         const domainsScreentime = new Map();
         let seshIdx = 0;
         let tabIdx = 0;
-        let prevSeshIdx = -1; // Used to check during the whileloop if the current tab is the first tab in the session
         while (seshIdx != this.sessions.length && tabIdx != this.tabHistory.length) {
             const tab = this.tabHistory[tabIdx];
             const sesh = this.sessions[seshIdx];
@@ -1024,21 +1023,11 @@ let TimeChart = class TimeChart extends lit__WEBPACK_IMPORTED_MODULE_0__.LitElem
                 // If this tabTimestamp is within the session
             }
             else {
-                // If this is the first tab in this session, include the time from the start of the session to this tab
-                if (prevSeshIdx !== seshIdx) {
-                    prevSeshIdx = seshIdx;
-                    const prevTab = this.tabHistory.filter(tab => tab.timestamp < sesh.start).pop();
-                    if (prevTab) {
-                        const domain = this._getDomain(prevTab.url);
-                        domainsScreentime.set(domain, ((_a = domainsScreentime.get(domain)) !== null && _a !== void 0 ? _a : 0) + (tab.timestamp - sesh.start));
-                    }
-                }
-                // Calculate the duration of this tab
                 const domain = this._getDomain(tab.url);
                 const nextTabTime = tabIdx + 1 < this.tabHistory.length ? this.tabHistory[tabIdx + 1].timestamp : Infinity;
                 const duration = Math.min(nextTabTime, sesh.end) - tab.timestamp;
                 // Update the mapping
-                domainsScreentime.set(domain, ((_b = domainsScreentime.get(domain)) !== null && _b !== void 0 ? _b : 0) + duration);
+                domainsScreentime.set(domain, ((_a = domainsScreentime.get(domain)) !== null && _a !== void 0 ? _a : 0) + duration);
                 tabIdx++;
             }
         }
@@ -5500,14 +5489,6 @@ const startOfDayTimestamp = startOfDay.getTime();
 console.log("startOfDayTimestamp: " + startOfDayTimestamp);
 // Detect if this is localhost
 if (window.location.hostname !== "localhost") {
-    // chrome.history.search({
-    //     text: '',
-    //     startTime: startOfDayTimestamp,
-    //     maxResults: 1000000 // basically no upper limit
-    // }, function(historyItems) {
-    //     console.log("in search")
-    //     console.log(historyItems);
-    // });
     // FOR TESTING
     (async function () {
         console.log(chrome);

@@ -26,7 +26,6 @@ class TimeChart extends LitElement {
         const domainsScreentime: Map<string, number> = new Map();
         let seshIdx = 0;
         let tabIdx = 0;
-        let prevSeshIdx = -1; // Used to check during the whileloop if the current tab is the first tab in the session
         while (seshIdx != this.sessions.length && tabIdx != this.tabHistory.length) {
             const tab = this.tabHistory[tabIdx];
             const sesh = this.sessions[seshIdx];
@@ -38,16 +37,6 @@ class TimeChart extends LitElement {
                 seshIdx++;
             // If this tabTimestamp is within the session
             } else {
-                // If this is the first tab in this session, include the time from the start of the session to this tab
-                if (prevSeshIdx !== seshIdx) {
-                    prevSeshIdx = seshIdx;
-                    const prevTab = this.tabHistory.filter(tab => tab.timestamp < sesh.start).pop();
-                    if (prevTab) {
-                        const domain = this._getDomain(prevTab.url);
-                        domainsScreentime.set(domain, (domainsScreentime.get(domain) ?? 0) + (tab.timestamp - sesh.start));
-                    }
-                }
-                // Calculate the duration of this tab
                 const domain = this._getDomain(tab.url);
                 const nextTabTime = tabIdx + 1 < this.tabHistory.length ? this.tabHistory[tabIdx + 1].timestamp : Infinity;
                 const duration = Math.min(nextTabTime, sesh.end) - tab.timestamp;

@@ -9,7 +9,7 @@ import { minTabSeshLength, minActiveSeshGap } from '../constants';
 
 @customElement('lit-page')
 class Page extends LitElement {
-    
+
     static styles: CSSResultGroup = styles;
 
     @state()
@@ -138,9 +138,9 @@ class Page extends LitElement {
     //          The last tab and first tab of every session are immune to this
     //      remove tab sessions next to each other that have the same url
     private _setTabHistory(tabHistory: TabTimestamp[]) {
-        let filtered: TabTimestamp[] = [];
+        let modified: TabTimestamp[] = [];
         // Remove tab sessions that are less than minTabSeshLength
-        // The last tab and first tab of every session are immune to this
+        // The last tab of every session are immune to this
         let sessionsIdx = 0;
         let immune = false;
         for (let i = 0; i < tabHistory.length - 1; i++) {
@@ -152,20 +152,38 @@ class Page extends LitElement {
 
             // If immune or the time difference is greater than the minTabSeshLength
             if (immune || tabHistory[i+1].timestamp - tabHistory[i].timestamp >= minTabSeshLength * 60 * 1000) {
-                filtered.push(tabHistory[i]);
+                modified.push(tabHistory[i]);
                 immune = false;
             }
         }
-        filtered.push(tabHistory[tabHistory.length - 1]);
+        modified.push(tabHistory[tabHistory.length - 1]);
 
         // Remove tab sessions next to each other that have the same url
-        for (let i = filtered.length - 1; i > 0; i--) {
-            if (filtered[i].url === filtered[i - 1].url) {
-                filtered.splice(i, 1);
+        for (let i = modified.length - 1; i > 0; i--) {
+            if (modified[i].url === modified[i - 1].url) {
+                modified.splice(i, 1);
             }
         }
 
-        this._tabHistory = filtered;
+        // Add in previous tabs at the start of each session
+        //      If a sesison is started on the preivously opened tab by user interaction, this captures that
+        //      This also keeps the first tab of every session consistent with session starttime
+        for (let sesh of this._sessions) {
+            const prevTab = tabHistory.filter(tab => tab.timestamp <= sesh.start).pop();
+            if (prevTab) {
+                modified.push({
+                    url: prevTab.url,
+                    timestamp: sesh.start,
+                    favIconUrl: prevTab.favIconUrl,
+                    title: prevTab.title
+                });
+            }
+        }
+        // Resort to keep timestamps in increasing order
+        modified.sort((a, b) => a.timestamp - b.timestamp);
+
+
+        this._tabHistory = modified;
     }
 
     // To do some data transformation before setting _session. Currently the things it does are:
