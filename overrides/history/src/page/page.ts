@@ -137,6 +137,7 @@ class Page extends LitElement {
     //      remove tab sessions that are less than minTabSeshLength
     //          The last tab and first tab of every session are immune to this
     //      remove tab sessions next to each other that have the same url
+    //     add in last tab at the start of each session
     private _setTabHistory(tabHistory: TabTimestamp[]) {
         let modified: TabTimestamp[] = [];
         // Remove tab sessions that are less than minTabSeshLength

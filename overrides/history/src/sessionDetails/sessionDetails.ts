@@ -2,7 +2,7 @@ import { LitElement, html, css, CSSResultGroup, TemplateResult } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { ActivitySession, Tab, TabTimestamp, TimeSlot } from '../types';
 import { styles } from './style';
-import { sessiondetails__timeslotsPerHour, minTabSeshLength } from '../constants';
+import { sessiondetails__timeslotsPerHour } from '../constants';
 import './tabSession/tabSession';
 
 @customElement('lit-session-details')

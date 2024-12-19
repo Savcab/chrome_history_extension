@@ -3,11 +3,19 @@ export type ActivitySession = {
     end: number;
 }
 
+export type DateToActivitySession = {
+    [date: string]: ActivitySession[];
+}
+
 export type TabTimestamp = {
     url: string;
     timestamp: number;
     favIconUrl: string;
     title: string;
+}
+
+export type DateToTabTimestamp = {
+    [date: string]: TabTimestamp[];
 }
 
 export type Tab = {
