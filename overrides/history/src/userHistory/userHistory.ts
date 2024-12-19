@@ -11,17 +11,10 @@ class UserHistory extends LitElement {
 
     static styles: CSSResultGroup = styles;
 
-    @property({type: String, reflect: true})
-        date: string = "";
-
-    @property({type: Array, reflect: true})
-        sessions: ActivitySession[] = [];
-
-    @property({type: Number, reflect: true})
-        currRelMinute: number = 0;
-
-    @state()
-        _selectedSessionIdx = -1;
+    @property({type: String, reflect: true}) date: string = "";
+    @property({type: Array, reflect: true}) sessions: ActivitySession[] = [];
+    @property({type: Number, reflect: true}) currRelMinute: number = 0;
+    @property({type: Number, reflect: true}) selectedSessionIdx = -1;
 
 
     /*
@@ -30,15 +23,16 @@ class UserHistory extends LitElement {
     private _onSessionClick(event: CustomEvent) {
         event.stopPropagation();
         const clickedIdx = event.detail.idx;
-        if (this._selectedSessionIdx === clickedIdx) {
-            this._selectedSessionIdx = -1;
+        let newSelectedSessionIdx;
+        if (this.selectedSessionIdx === clickedIdx) {
+            newSelectedSessionIdx = -1;
         } else {
-            this._selectedSessionIdx = clickedIdx;
+            newSelectedSessionIdx = clickedIdx;
         }
 
         const selectedEvent = new CustomEvent('session-selected', {
             detail: {
-                idx: this._selectedSessionIdx
+                idx: newSelectedSessionIdx
             },
             bubbles: true,
             composed: true
@@ -73,7 +67,7 @@ class UserHistory extends LitElement {
                     start=${startRelEpoch}
                     end=${endRelEpoch}
                     idx=${idx}
-                    ?selected=${idx === this._selectedSessionIdx}
+                    ?selected=${idx === this.selectedSessionIdx}
                 >
 
                 </lit-user-history-session>

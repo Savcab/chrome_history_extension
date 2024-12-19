@@ -14,7 +14,7 @@ type currSeshType = {
 // This is the model in the Model View Controller structure
 
 // This should be a singleton, but not yet becuase haven't looked into how that design pattern works
-class DataHandler {
+export class DataHandler {
     /*
      * PRIVATE VARIABLES 
      */
@@ -32,6 +32,7 @@ class DataHandler {
     private _selectedDate: string = "";
 
     // Interval ID for the interval set up in windows.setInterval that updates _currRelMinute
+    // NOTE: doesn't have custom getters and setters like the other variables
     private _intervalId: number = 0;
 
     /*
@@ -50,7 +51,7 @@ class DataHandler {
         this._availableDates__updated_callbacks.forEach(callback => callback(this._getAvailableDates()));
     }
     private _publishSelectedDate() {
-        this._selectedDate__updated_callbacks.forEach(callback => callback(this._selectedDate));
+        this._selectedDate__updated_callbacks.forEach(callback => callback(this.selectedDate));
     }
     private _publishSessions() {
         this._sessions__updated_callbacks.forEach(callback => callback(this._getSessions()));
@@ -59,7 +60,7 @@ class DataHandler {
         this._tabSessions__updated_callbacks.forEach(callback => callback(this._getTabSessions()));
     }
     private _publishCurrRelMinute() {
-        this._currRelMinute__updated_callbacks.forEach(callback => callback(this._currRelMinute));
+        this._currRelMinute__updated_callbacks.forEach(callback => callback(this.currRelMinute));
     }
 
     // Subscribe functions (to be called by consumers)
@@ -69,7 +70,7 @@ class DataHandler {
     }
     public subscribeSelectedDate(callback: SelectedDateSetter): string {
         this._selectedDate__updated_callbacks.push(callback);
-        return this._selectedDate;
+        return this.selectedDate;
     }
     public subscribeSessions(callback: SessionsSetter): ActivitySession[] {
         this._sessions__updated_callbacks.push(callback);
@@ -81,16 +82,16 @@ class DataHandler {
     }
     public subscribeCurrRelMinute(callback: CurrRelMinuteSetter): number {
         this._currRelMinute__updated_callbacks.push(callback);
-        return this._currRelMinute;
+        return this.currRelMinute;
     }
 
 
     /*
-     * SPECIAL SETTERS - when the "data product"'s dependencies change, a new publish has to be triggered
+     * SPECIAL SETTERS + GETTERS - when the "data product"'s dependencies change, a new publish has to be triggered
      */
     set active(active: boolean) {
         this._active = active;
-        if (this._currDate === this._selectedDate) {
+        if (this.currDate === this.selectedDate) {
             this._publishSessions();
         }
     }
@@ -106,7 +107,7 @@ class DataHandler {
     }
     set currScreentime(currScreentime: ActivitySession[]) {
         this._currScreentime = currScreentime;
-        if (this._currDate === this._selectedDate) {
+        if (this.currDate === this.selectedDate) {
             this._publishSessions();
         }
     }
@@ -116,7 +117,7 @@ class DataHandler {
     }
     set currTabHistory(currTabHistory: TabTimestamp[]) {
         this._currTabHistory = currTabHistory;
-        if (this._currDate === this._selectedDate) {
+        if (this.currDate === this.selectedDate) {
             this._publishTabSessions();
         }
     }
@@ -128,7 +129,7 @@ class DataHandler {
         this._currRelMinute = currRelMinute;
         this._publishCurrRelMinute();
         // If the today is displayed and there's an active session, need to update the last session to end at the most up to date minute
-        if (this._currDate === this._selectedDate && this._active) {
+        if (this.currDate === this.selectedDate && this.active) {
             this._publishSessions();
         }
     }
@@ -136,6 +137,17 @@ class DataHandler {
         this._currSesh = currSesh;
         // Don't need to publish sessions because set active already does
     }
+
+    get active(): boolean {return this._active;}
+    get currDate(): string {return this._currDate;}
+    get selectedDate(): string {return this._selectedDate;}
+    get currScreentime(): ActivitySession[] {return this._currScreentime;}
+    get pastScreentimes(): DateToActivitySession {return this._pastScreentimes;}
+    get currTabHistory(): TabTimestamp[] {return this._currTabHistory;}
+    get pastTabHistories(): DateToTabTimestamp {return this._pastTabHistories;}
+    get currRelMinute(): number {return this._currRelMinute;}
+    get currSesh(): currSeshType {return this._currSesh; }
+
 
     /**
      * PUBLIC FUNCTIONS
@@ -170,6 +182,10 @@ class DataHandler {
                     this.active = changes.active.newValue;
                 }
                 if (changes.currDate) {
+                    // If the current selected date is the current date, update the selected date
+                    if (this.selectedDate === this.currDate) {
+                        this.selectedDate = changes.currDate.newValue;
+                    }
                     this.currDate = changes.currDate.newValue;
                 }
                 if (changes.currScreentime) {
@@ -211,8 +227,8 @@ class DataHandler {
      * DATA PROCESSING - these are the "data products" exposed to the view that need special processing
      */
     private _getAvailableDates(): string[] {
-        const dates = Object.keys(this._pastScreentimes);
-        dates.push(this._currDate);
+        const dates = Object.keys(this.pastScreentimes);
+        dates.push(this.currDate);
         dates.sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
         return dates;
     }
@@ -220,24 +236,24 @@ class DataHandler {
     private _getSessions(): ActivitySession[] {
         // Choose the correct sessions
         let activeSessions: ActivitySession[] = [];
-        if (this._currDate === this._selectedDate) {
-            activeSessions = this._currScreentime;
+        if (this.currDate === this.selectedDate) {
+            activeSessions = this.currScreentime;
             // If there is a session currently active, add it to the list
-            if (this._active) {
+            if (this.active) {
                 activeSessions.push({
-                    start: this._currSesh.start,
+                    start: this.currSesh.start,
                     end: Date.now()
                 });
             }
         } else {
-            activeSessions = this._pastScreentimes[this._selectedDate];
+            activeSessions = this.pastScreentimes[this.selectedDate];
         }
         return this._processRawScreentime(activeSessions);
     }
 
     private _getTabSessions(): Tab[] {
         // Choose the correct tabHistory
-        const tabHistory = this._currDate === this._selectedDate ? this._currTabHistory : this._pastTabHistories[this._selectedDate];
+        const tabHistory = this.currDate === this.selectedDate ? this.currTabHistory : this.pastTabHistories[this.selectedDate];
         const processedTabHistory = this._processRawTabHistory(tabHistory);
         return this._createTabSessions(processedTabHistory);
     }

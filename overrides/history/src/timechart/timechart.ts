@@ -1,6 +1,6 @@
 import { LitElement, html, css, CSSResultGroup } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
-import { ActivitySession, TabTimestamp, ChartItem } from '../types';
+import { ActivitySession, Tab, ChartItem } from '../types';
 import { styles } from './style';
 import './chart/chart';
 import { Session } from '../userHistory/session/session';
@@ -10,40 +10,19 @@ class TimeChart extends LitElement {
 
     static styles = styles;
 
-    @property({type: Array, reflect: true})
-        sessions: ActivitySession[] = [];
+    @property({type: Array, reflect: true}) sessions: ActivitySession[] = [];
+    @property({type: Array, reflect: true}) tabSessions: Tab[] = [];
 
-    @property({type: Array, reflect: true})
-        tabHistory: TabTimestamp[] = [];
-
-    @state()
-        displayTop: number = 3;
+    @state() displayTop: number = 3;
     
     /*
      * HELPER FUNCTIONS 
      */
     private _calculateDomainTimes() {
         const domainsScreentime: Map<string, number> = new Map();
-        let seshIdx = 0;
-        let tabIdx = 0;
-        while (seshIdx != this.sessions.length && tabIdx != this.tabHistory.length) {
-            const tab = this.tabHistory[tabIdx];
-            const sesh = this.sessions[seshIdx];
-            // If this tabTimestamp is before the session
-            if (tab.timestamp < sesh.start) {
-                tabIdx++;
-            // If this tabTimestamp is after the session
-            } else if (tab.timestamp > sesh.end) {
-                seshIdx++;
-            // If this tabTimestamp is within the session
-            } else {
-                const domain = this._getDomain(tab.url);
-                const nextTabTime = tabIdx + 1 < this.tabHistory.length ? this.tabHistory[tabIdx + 1].timestamp : Infinity;
-                const duration = Math.min(nextTabTime, sesh.end) - tab.timestamp;
-                // Update the mapping
-                domainsScreentime.set(domain, (domainsScreentime.get(domain) ?? 0) + duration);
-                tabIdx++;
-            }
+        for (let tab of this.tabSessions) {
+            const domain = this._getDomain(tab.url);
+            domainsScreentime.set(domain, (domainsScreentime.get(domain) ?? 0 ) + tab.end - tab.start);
         }
         return domainsScreentime;
     }

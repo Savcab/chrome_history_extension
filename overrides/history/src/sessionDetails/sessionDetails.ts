@@ -19,7 +19,7 @@ class SessionDetails extends LitElement {
         selectedSessionIdx: number = -1;
 
     @property({type: Array, reflect: true})
-        tabHistory: TabTimestamp[] = [];
+        tabSessions: Tab[] = [];
 
 
     /*
@@ -27,28 +27,8 @@ class SessionDetails extends LitElement {
      */
     private _getCurrTabs(): Tab[] {
         const session: ActivitySession = this.sessions[this.selectedSessionIdx];
-        const currTabTimestamps: TabTimestamp[] = this.tabHistory.filter(tab => (tab.timestamp >= session.start && tab.timestamp <= session.end));
-        // tabSessions are tabs with start and end dates
-        const tabSessions: Tab [] = [];
-        for (let idx = 0; idx < currTabTimestamps.length; idx++) {
-            // The start of the next tab, if it's the last one, the end of this activity session
-            const endTimestamp = idx !== currTabTimestamps.length - 1 ? 
-                currTabTimestamps[idx + 1].timestamp : 
-                this.sessions[this.selectedSessionIdx].end;
-            
-            tabSessions.push({
-                url: currTabTimestamps[idx].url,
-                start: currTabTimestamps[idx].timestamp,
-                end: endTimestamp,
-                favIconUrl: currTabTimestamps[idx].favIconUrl,
-                title: currTabTimestamps[idx].title
-            });
-        }
-        console.log("tabSessions:", tabSessions);
-        tabSessions.forEach(tab => {
-            console.log(`Tab ${tab.url}. Started: ${new Date(tab.start).toLocaleTimeString()}. Ended: ${new Date(tab.end).toLocaleTimeString()}`);
-        });
-        return tabSessions;
+        const currTabs = this.tabSessions.filter((tab) => tab.start >= session.start && tab.end <= session.end);
+        return currTabs;
     }
 
     private _getTimestampText(hour: number, part: number): string {
