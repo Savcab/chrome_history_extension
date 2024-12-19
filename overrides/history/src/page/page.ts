@@ -36,14 +36,14 @@ class Page extends LitElement {
         // Subscribe to the dataHanlder
         this._selectedDate = this._dataHandler.subscribeSelectedDate((newSelectedDate) => {
             this._selectedDate = newSelectedDate
+            // Reset selected session index
+            this._selectedSessionIdx = -1;
         });
         this._availableDates = this._dataHandler.subscribeAvailableDates((newAvailableDates) => {
             this._availableDates = newAvailableDates
         });
         this._sessions = this._dataHandler.subscribeSessions((newSessions) => {
             this._sessions = newSessions
-            // Reset selected session index
-            this._selectedSessionIdx = -1;
         });
         this._tabSessions = this._dataHandler.subscribeTabSessions((newTabSessions) => {
             this._tabSessions = newTabSessions
@@ -66,10 +66,22 @@ class Page extends LitElement {
         this._selectedSessionIdx = event.detail.idx;
     }
 
+    private _onDateChange(event: Event) {
+        event.stopPropagation();
+        const newDate = (event.target as HTMLSelectElement).value;
+        console.log("PAGE: new date selected: ", newDate);
+        this._dataHandler.setSelectedDate(newDate);
+    }
+
     render() {
 
         return html`
             <div id='mainbody'>
+                <select  @change=${this._onDateChange}>
+                    ${this._availableDates.map((date) => html`
+                        <option value=${date} ?selected=${date === this._selectedDate}>${date}</option>
+                    `)}
+                </select>
                 <div class='left-half'>
                     <lit-user-history 
                         .sessions=${this._sessions}
@@ -90,7 +102,6 @@ class Page extends LitElement {
                     </div>
                     <div class='right-item'>
                         <lit-timechart
-                            .sessions=${this._sessions}
                             .tabSessions=${this._tabSessions}
                         ></lit-timechart>
                     </div>

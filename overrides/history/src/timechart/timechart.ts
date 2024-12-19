@@ -10,7 +10,6 @@ class TimeChart extends LitElement {
 
     static styles = styles;
 
-    @property({type: Array, reflect: true}) sessions: ActivitySession[] = [];
     @property({type: Array, reflect: true}) tabSessions: Tab[] = [];
 
     @state() displayTop: number = 3;

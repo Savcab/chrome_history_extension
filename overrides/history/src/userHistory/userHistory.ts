@@ -92,12 +92,13 @@ class UserHistory extends LitElement {
      * LIFECYCLE METHODS
      */
     firstUpdated() {
-        console.log("IN FIRSTUPDATE FOR USERHISTORY");
-        // Make present bar the center of the user's screen
-        const presentBar = this.shadowRoot?.querySelector('.present-bar');
-        console.log(presentBar);
-        if (presentBar) {
-            presentBar.scrollIntoView({block: "center"});
+        if (this.date === (new Date).toLocaleDateString()) {
+            // Make present bar the center of the user's screen
+            const presentBar = this.shadowRoot?.querySelector('.present-bar');
+            console.log(presentBar);
+            if (presentBar) {
+                presentBar.scrollIntoView({block: "center"});
+            }
         }
     }
 
@@ -134,7 +135,7 @@ class UserHistory extends LitElement {
                             ${this.sessions.map((session, idx) => this._sessionMapHTML(session, idx))}
 
                             <!-- The present timestamp bar -->
-                            ${this._createPresentBarHtml()}
+                            ${(this.date === (new Date).toLocaleDateString()) ? this._createPresentBarHtml(): ''}
                         </div>
                     </div>
             </div>

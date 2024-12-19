@@ -36,6 +36,367 @@ const userhistory__timeslotsPerHour = 2;
 
 /***/ }),
 
+/***/ "./src/model.ts":
+/*!**********************!*\
+  !*** ./src/model.ts ***!
+  \**********************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   DataHandler: () => (/* binding */ DataHandler)
+/* harmony export */ });
+/* harmony import */ var _constants__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./constants */ "./src/constants.ts");
+
+// This is the model in the Model View Controller structure
+// This should be a singleton, but not yet becuase haven't looked into how that design pattern works
+class DataHandler {
+    // Publish functions
+    _publishAvailableDates() {
+        this._availableDates__updated_callbacks.forEach(callback => callback(this._getAvailableDates()));
+    }
+    _publishSelectedDate() {
+        this._selectedDate__updated_callbacks.forEach(callback => callback(this.selectedDate));
+    }
+    _publishSessions() {
+        this._sessions__updated_callbacks.forEach(callback => callback(this._getSessions()));
+    }
+    _publishTabSessions() {
+        this._tabSessions__updated_callbacks.forEach(callback => callback(this._getTabSessions()));
+    }
+    _publishCurrRelMinute() {
+        this._currRelMinute__updated_callbacks.forEach(callback => callback(this.currRelMinute));
+    }
+    // Subscribe functions (to be called by consumers)
+    subscribeAvailableDates(callback) {
+        this._availableDates__updated_callbacks.push(callback);
+        return this._getAvailableDates();
+    }
+    subscribeSelectedDate(callback) {
+        this._selectedDate__updated_callbacks.push(callback);
+        return this.selectedDate;
+    }
+    subscribeSessions(callback) {
+        this._sessions__updated_callbacks.push(callback);
+        return this._getSessions();
+    }
+    subscribeTabSessions(callback) {
+        this._tabSessions__updated_callbacks.push(callback);
+        return this._getTabSessions();
+    }
+    subscribeCurrRelMinute(callback) {
+        this._currRelMinute__updated_callbacks.push(callback);
+        return this.currRelMinute;
+    }
+    /*
+     * SPECIAL SETTERS + GETTERS - when the "data product"'s dependencies change, a new publish has to be triggered
+     */
+    set active(active) {
+        this._active = active;
+        if (this.currDate === this.selectedDate) {
+            this._publishSessions();
+        }
+    }
+    set currDate(currDate) {
+        this._currDate = currDate;
+        this._publishAvailableDates();
+    }
+    set selectedDate(selectedDate) {
+        this._selectedDate = selectedDate;
+        this._publishSelectedDate();
+        this._publishSessions();
+        this._publishTabSessions();
+    }
+    set currScreentime(currScreentime) {
+        this._currScreentime = currScreentime;
+        if (this.currDate === this.selectedDate) {
+            this._publishSessions();
+            this._publishTabSessions();
+        }
+    }
+    set pastScreentimes(pastScreentimes) {
+        this._pastScreentimes = pastScreentimes;
+        this._publishAvailableDates();
+    }
+    set currTabHistory(currTabHistory) {
+        this._currTabHistory = currTabHistory;
+        if (this.currDate === this.selectedDate) {
+            this._publishTabSessions();
+        }
+    }
+    set pastTabHistories(pastTabHistories) {
+        this._pastTabHistories = pastTabHistories;
+        this._publishAvailableDates();
+    }
+    set currRelMinute(currRelMinute) {
+        this._currRelMinute = currRelMinute;
+        this._publishCurrRelMinute();
+        // If the today is displayed and there's an active session, need to update the last session to end at the most up to date minute
+        if (this.currDate === this.selectedDate && this.active) {
+            this._publishSessions();
+        }
+    }
+    set currSesh(currSesh) {
+        this._currSesh = currSesh;
+        // Don't need to publish sessions because set active already does
+    }
+    get active() { return this._active; }
+    get currDate() { return this._currDate; }
+    get selectedDate() { return this._selectedDate; }
+    get currScreentime() { return this._currScreentime; }
+    get pastScreentimes() { return this._pastScreentimes; }
+    get currTabHistory() { return this._currTabHistory; }
+    get pastTabHistories() { return this._pastTabHistories; }
+    get currRelMinute() { return this._currRelMinute; }
+    get currSesh() { return this._currSesh; }
+    /**
+     * PUBLIC FUNCTIONS
+     */
+    constructor() {
+        /*
+         * PRIVATE VARIABLES
+         */
+        // Straight from chrome.storage.local
+        this._active = false;
+        this._currDate = "";
+        this._currScreentime = [];
+        this._pastScreentimes = {};
+        this._currTabHistory = [];
+        this._pastTabHistories = {};
+        this._currSesh = { start: 0 };
+        // Own custom logic
+        this._currRelMinute = 0;
+        this._selectedDate = "";
+        // Interval ID for the interval set up in windows.setInterval that updates _currRelMinute
+        // NOTE: doesn't have custom getters and setters like the other variables
+        this._intervalId = 0;
+        /*
+         * PUBSUB FUNCTIONS
+         */
+        // Callbacks
+        this._availableDates__updated_callbacks = [];
+        this._selectedDate__updated_callbacks = [];
+        this._sessions__updated_callbacks = [];
+        this._tabSessions__updated_callbacks = [];
+        this._currRelMinute__updated_callbacks = [];
+        // Don't do much, need to call init()
+    }
+    // MUST be called before being used
+    async init() {
+        // Initialize the states from chrome.storage.local
+        const { active, currDate, currScreentime, pastScreentimes, currTabHistory, pastTabHistories, currSesh } = await chrome.storage.local.get(["active", "currDate", "currScreentime", "pastScreentimes", "currTabHistory", "pastTabHistories", "currSesh"]);
+        this.active = active;
+        this.currDate = currDate;
+        this.currScreentime = currScreentime;
+        this.pastScreentimes = pastScreentimes;
+        this.currTabHistory = currTabHistory;
+        this.pastTabHistories = pastTabHistories;
+        this.currSesh = currSesh;
+        // Initialize the rest of the states
+        this.currRelMinute = this._getRelMinutesIntoDay();
+        this.selectedDate = this.currDate;
+        // Set up timer to keep currRelMinute up to date
+        this._intervalId = window.setInterval(() => {
+            this.currRelMinute = this._getRelMinutesIntoDay();
+        }, 1000 * 60);
+        // Add event listener for chrome.storage updates
+        chrome.storage.onChanged.addListener((changes, areaName) => {
+            if (areaName === "local") {
+                if (changes.active) {
+                    this.active = changes.active.newValue;
+                }
+                if (changes.currDate) {
+                    // If the current selected date is the current date, update the selected date
+                    let updateSelectedDate = false;
+                    if (this.selectedDate === this.currDate) {
+                        updateSelectedDate = true;
+                    }
+                    // Must update selectedDate AFTER currDate or else it will lead to errors
+                    this.currDate = changes.currDate.newValue;
+                    if (updateSelectedDate) {
+                        this.selectedDate = this.currDate;
+                    }
+                }
+                if (changes.currScreentime) {
+                    this.currScreentime = (changes.currScreentime.newValue);
+                }
+                if (changes.pastScreentimes) {
+                    this.pastScreentimes = (changes.pastScreentimes.newValue);
+                }
+                if (changes.currTabHistory) {
+                    this.currTabHistory = changes.currTabHistory.newValue;
+                }
+                if (changes.pastTabHistories) {
+                    this.pastTabHistories = changes.pastTabHistories.newValue;
+                }
+                if (changes.currSesh) {
+                    this.currSesh = changes.currSesh.newValue;
+                }
+            }
+        });
+    }
+    cleanup() {
+        if (this._intervalId) {
+            window.clearInterval(this._intervalId);
+        }
+    }
+    // Set the selected date, return true if successful, false if not
+    setSelectedDate(date) {
+        const availableDates = this._getAvailableDates();
+        if (availableDates.includes(date)) {
+            console.log("DATACONTROLLER: Setting selected date to: ", date);
+            this.selectedDate = date;
+            return true;
+        }
+        return false;
+    }
+    /**
+     * DATA PROCESSING - these are the "data products" exposed to the view that need special processing
+     */
+    _getAvailableDates() {
+        const dates = Object.keys(this.pastScreentimes);
+        dates.push(this.currDate);
+        dates.sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+        return dates;
+    }
+    _getSessions() {
+        // Choose the correct sessions
+        let activeSessions = [];
+        if (this.currDate === this.selectedDate) {
+            activeSessions = this.currScreentime;
+            // If there is a session currently active, add it to the list
+            if (this.active) {
+                activeSessions.push({
+                    start: this.currSesh.start,
+                    end: Date.now()
+                });
+            }
+        }
+        else {
+            activeSessions = this.pastScreentimes[this.selectedDate];
+        }
+        return this._processRawScreentime(activeSessions);
+    }
+    _getTabSessions() {
+        // Choose the correct tabHistory
+        const tabHistory = this.currDate === this.selectedDate ? this.currTabHistory : this.pastTabHistories[this.selectedDate];
+        const processedTabHistory = this._processRawTabHistory(tabHistory);
+        return this._createTabSessions(processedTabHistory);
+    }
+    /**
+     * HELPER FUNCTIONS
+     */
+    // Clean screentime:
+    //    merge sessions that are less than minActiveSeshGap
+    _processRawScreentime(activeSessions) {
+        if (activeSessions.length === 0) {
+            return [];
+        }
+        const filtered = [];
+        let currSesh = activeSessions[0];
+        for (let sesh of activeSessions) {
+            if (sesh.start - currSesh.end <= _constants__WEBPACK_IMPORTED_MODULE_0__.minActiveSeshGap * 60 * 1000) {
+                currSesh.end = sesh.end;
+            }
+            else {
+                filtered.push(currSesh);
+                currSesh = sesh;
+            }
+        }
+        // Add the last session
+        filtered.push(currSesh);
+        return filtered;
+    }
+    // Clean tabHistory (but still keep it's format):
+    //      remove tab sessions that are less than minTabSeshLength
+    //          The last tab and first tab of every session are immune to this
+    //      remove tab sessions next to each other that have the same url
+    //     add in last tab at the start of each session
+    _processRawTabHistory(tabHistory) {
+        const sessions = this._getSessions();
+        let modified = [];
+        // Remove tab sessions that are less than minTabSeshLength
+        // The last tab of every session are immune to this
+        let sessionsIdx = 0;
+        let immune = false;
+        for (let i = 0; i < tabHistory.length - 1; i++) {
+            // If this is the first tab of a session
+            if (sessionsIdx < sessions.length && tabHistory[i].timestamp >= sessions[sessionsIdx].start) {
+                immune = true;
+                sessionsIdx += 1;
+            }
+            // If immune or the time difference is greater than the minTabSeshLength
+            if (immune || tabHistory[i + 1].timestamp - tabHistory[i].timestamp >= _constants__WEBPACK_IMPORTED_MODULE_0__.minTabSeshLength * 60 * 1000) {
+                modified.push(tabHistory[i]);
+                immune = false;
+            }
+        }
+        modified.push(tabHistory[tabHistory.length - 1]);
+        // Remove tab sessions next to each other that have the same url
+        for (let i = modified.length - 1; i > 0; i--) {
+            if (modified[i].url === modified[i - 1].url) {
+                modified.splice(i, 1);
+            }
+        }
+        // Add in previous tabs at the start of each session
+        //      If a sesison is started on the preivously opened tab by user interaction, this captures that
+        //      This also keeps the first tab of every session consistent with session starttime
+        for (let sesh of sessions) {
+            const prevTab = tabHistory.filter(tab => tab.timestamp <= sesh.start).pop();
+            if (prevTab) {
+                modified.push({
+                    url: prevTab.url,
+                    timestamp: sesh.start,
+                    favIconUrl: prevTab.favIconUrl,
+                    title: prevTab.title
+                });
+            }
+        }
+        // Re-sort to keep timestamps in increasing order
+        modified.sort((a, b) => a.timestamp - b.timestamp);
+        return modified;
+    }
+    // Take a list of tab with timestamps and create a list of tabs with start and end times
+    _createTabSessions(tabHistory) {
+        // Split tab timestamps by sessions they fall into
+        const sessions = this._getSessions();
+        const tabTimestampGroups = [];
+        for (let sesh of sessions) {
+            const currGroup = tabHistory.filter(tab => (tab.timestamp >= sesh.start && tab.timestamp <= sesh.end));
+            tabTimestampGroups.push(currGroup);
+        }
+        // Iterate through each group and create tab sessions
+        const tabSessions = [];
+        for (let groupIdx = 0; groupIdx < tabTimestampGroups.length; groupIdx++) {
+            const currTabTimestamps = tabTimestampGroups[groupIdx];
+            for (let idx = 0; idx < currTabTimestamps.length; idx++) {
+                // The start of the next tab, if it's the last one, the end of this activity session
+                const endTimestamp = idx !== currTabTimestamps.length - 1 ?
+                    currTabTimestamps[idx + 1].timestamp :
+                    sessions[groupIdx].end;
+                tabSessions.push({
+                    url: currTabTimestamps[idx].url,
+                    start: currTabTimestamps[idx].timestamp,
+                    end: endTimestamp,
+                    favIconUrl: currTabTimestamps[idx].favIconUrl,
+                    title: currTabTimestamps[idx].title
+                });
+            }
+        }
+        return tabSessions;
+    }
+    // Get the number of minutes into the current day
+    _getRelMinutesIntoDay() {
+        const now = new Date();
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+        return (now.getTime() - startOfDay.getTime()) / (1000 * 60);
+    }
+}
+
+
+/***/ }),
+
 /***/ "./src/page/page.ts":
 /*!**************************!*\
   !*** ./src/page/page.ts ***!
@@ -49,7 +410,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _userHistory_userHistory__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../userHistory/userHistory */ "./src/userHistory/userHistory.ts");
 /* harmony import */ var _sessionDetails_sessionDetails__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../sessionDetails/sessionDetails */ "./src/sessionDetails/sessionDetails.ts");
 /* harmony import */ var _timechart_timechart__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../timechart/timechart */ "./src/timechart/timechart.ts");
-/* harmony import */ var _constants__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../constants */ "./src/constants.ts");
+/* harmony import */ var _model__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../model */ "./src/model.ts");
 var __decorate = (undefined && undefined.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -66,201 +427,88 @@ var __decorate = (undefined && undefined.__decorate) || function (decorators, ta
 let Page = class Page extends _node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.LitElement {
     constructor() {
         super(...arguments);
-        this._date = new Date().toDateString();
-        // NOTE: this state MUST be updated using _setSessions method
+        // This is the model from model view controller
+        this._dataHandler = new _model__WEBPACK_IMPORTED_MODULE_6__.DataHandler();
+        // States that are outputs of dataHandler
+        this._selectedDate = new Date().toDateString();
+        this._availableDates = [];
         this._sessions = [];
+        this._tabSessions = [];
         this._currRelMinute = 0;
+        // States that are used to display and handled by page
         this._selectedSessionIdx = -1;
-        // NOTE: this state MUST be updated using _setTabHistory method
-        this._tabHistory = [];
-        this._active = false;
-        // Interval ID for the interval set up in windows.setInterval that updates _currRelMinute
-        this._intervalId = 0;
     }
     /**
      * LIFECYCLE METHODS
      */
     async connectedCallback() {
         super.connectedCallback();
-        // Initialize the states
-        this._updateMinutesIntoDay();
-        this._intervalId = window.setInterval(() => this._upateStatesMinutely(), 1000 * 60);
-        if (window.location.hostname !== "localhost") {
-            let { currScreentime, currTabHistory, active, currSesh, currDate } = await chrome.storage.local.get(["currScreentime", "currTabHistory", "active", "currSesh", "currDate"]);
-            this._active = active;
-            this._date = currDate;
-            if (active) {
-                currScreentime.push({
-                    start: currSesh.start,
-                    end: Date.now()
-                });
-            }
-            this._setSessions(currScreentime);
-            this._setTabHistory(currTabHistory);
-        }
-        else {
-            // Localhost testing
-            this._setSessions([
-                { end: 1732782393918, start: 1732780868558 }
-            ]);
-        }
-        // Add event listener for chrome.storage updates
-        chrome.storage.onChanged.addListener((changes, areaName) => {
-            console.log("CHROME.STORAGE.LOCAL CHANGED!");
-            console.log("changes: ", changes);
-            console.log("areaName: ", areaName);
-            if (areaName === "local") {
-                if (changes.currScreentime) {
-                    this._setSessions(changes.currScreentime.newValue);
-                }
-                if (changes.currTabHistory) {
-                    this._setTabHistory(changes.currTabHistory.newValue);
-                }
-                if (changes.active) {
-                    this._active = changes.active.newValue;
-                }
-                if (changes.currDate) {
-                    this._date = changes.currDate.newValue;
-                }
-            }
+        await this._dataHandler.init();
+        // Subscribe to the dataHanlder
+        this._selectedDate = this._dataHandler.subscribeSelectedDate((newSelectedDate) => {
+            this._selectedDate = newSelectedDate;
+            // Reset selected session index
+            this._selectedSessionIdx = -1;
+        });
+        this._availableDates = this._dataHandler.subscribeAvailableDates((newAvailableDates) => {
+            this._availableDates = newAvailableDates;
+        });
+        this._sessions = this._dataHandler.subscribeSessions((newSessions) => {
+            this._sessions = newSessions;
+        });
+        this._tabSessions = this._dataHandler.subscribeTabSessions((newTabSessions) => {
+            this._tabSessions = newTabSessions;
+        });
+        this._currRelMinute = this._dataHandler.subscribeCurrRelMinute((newCurrRelMinute) => {
+            this._currRelMinute = newCurrRelMinute;
         });
     }
     disconnectedCallback() {
         super.disconnectedCallback();
-        if (this._intervalId) {
-            window.clearInterval(this._intervalId);
-        }
+        this._dataHandler.cleanup();
     }
     /*
      * EVENT HANDLERS
      */
     _onSessionSelected(event) {
         event.stopPropagation();
-        const idx = event.detail.idx;
-        this._selectedSessionIdx = idx;
+        this._selectedSessionIdx = event.detail.idx;
     }
-    /*
-     * HELPER FUNCTIONS
-     */
-    _updateMinutesIntoDay() {
-        const now = new Date();
-        const startOfDay = new Date();
-        startOfDay.setHours(0, 0, 0, 0);
-        this._currRelMinute = (now.getTime() - startOfDay.getTime()) / 1000 / 60;
-    }
-    // Need to update minutesIntoDay
-    // Need to update _sessions to be up to date with the current session
-    async _upateStatesMinutely() {
-        console.log("UPDATING STATES MINUTELY");
-        // update _currRelMinute
-        this._updateMinutesIntoDay();
-        // If active, keep the current session up to this current timestamp
-        if (this._active) {
-            let { currScreentime, currSesh } = await chrome.storage.local.get(["currScreentime", "currSesh"]);
-            currScreentime.push({
-                start: currSesh.start,
-                end: Date.now()
-            });
-            this._setSessions(currScreentime);
-        }
-        // DEBUG
-        console.log("this._sessions: ", this._sessions);
-    }
-    // Dependant on this._sessions
-    // To do some data transforamtion before setting _tabHistory. Currently the things it does are:
-    //      remove tab sessions that are less than minTabSeshLength
-    //          The last tab and first tab of every session are immune to this
-    //      remove tab sessions next to each other that have the same url
-    _setTabHistory(tabHistory) {
-        let modified = [];
-        // Remove tab sessions that are less than minTabSeshLength
-        // The last tab of every session are immune to this
-        let sessionsIdx = 0;
-        let immune = false;
-        for (let i = 0; i < tabHistory.length - 1; i++) {
-            // If this is the first tab of a session
-            if (sessionsIdx < this._sessions.length && tabHistory[i].timestamp >= this._sessions[sessionsIdx].start) {
-                immune = true;
-                sessionsIdx += 1;
-            }
-            // If immune or the time difference is greater than the minTabSeshLength
-            if (immune || tabHistory[i + 1].timestamp - tabHistory[i].timestamp >= _constants__WEBPACK_IMPORTED_MODULE_6__.minTabSeshLength * 60 * 1000) {
-                modified.push(tabHistory[i]);
-                immune = false;
-            }
-        }
-        modified.push(tabHistory[tabHistory.length - 1]);
-        // Remove tab sessions next to each other that have the same url
-        for (let i = modified.length - 1; i > 0; i--) {
-            if (modified[i].url === modified[i - 1].url) {
-                modified.splice(i, 1);
-            }
-        }
-        // Add in previous tabs at the start of each session
-        //      If a sesison is started on the preivously opened tab by user interaction, this captures that
-        //      This also keeps the first tab of every session consistent with session starttime
-        for (let sesh of this._sessions) {
-            const prevTab = tabHistory.filter(tab => tab.timestamp <= sesh.start).pop();
-            if (prevTab) {
-                modified.push({
-                    url: prevTab.url,
-                    timestamp: sesh.start,
-                    favIconUrl: prevTab.favIconUrl,
-                    title: prevTab.title
-                });
-            }
-        }
-        // Resort to keep timestamps in increasing order
-        modified.sort((a, b) => a.timestamp - b.timestamp);
-        this._tabHistory = modified;
-    }
-    // To do some data transformation before setting _session. Currently the things it does are:
-    //      merge sessions that are less that minactiveSeshGap minutes apart
-    _setSessions(activeSessions) {
-        // Edge case: empty list
-        if (activeSessions.length === 0) {
-            this._sessions = [];
-            return;
-        }
-        const filtered = [];
-        let currSesh = activeSessions[0];
-        for (let sesh of activeSessions) {
-            if (sesh.start - currSesh.end <= _constants__WEBPACK_IMPORTED_MODULE_6__.minActiveSeshGap * 60 * 1000) {
-                currSesh.end = sesh.end;
-            }
-            else {
-                filtered.push(currSesh);
-                currSesh = sesh;
-            }
-        }
-        // Add the last session
-        filtered.push(currSesh);
-        this._sessions = filtered;
+    _onDateChange(event) {
+        event.stopPropagation();
+        const newDate = event.target.value;
+        console.log("PAGE: new date selected: ", newDate);
+        this._dataHandler.setSelectedDate(newDate);
     }
     render() {
         return (0,_node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.html) `
             <div id='mainbody'>
+                <select  @change=${this._onDateChange}>
+                    ${this._availableDates.map((date) => (0,_node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.html) `
+                        <option value=${date} ?selected=${date === this._selectedDate}>${date}</option>
+                    `)}
+                </select>
                 <div class='left-half'>
                     <lit-user-history 
                         .sessions=${this._sessions}
-                        date=${this._date}
+                        date=${this._selectedDate}
                         currRelMinute=${this._currRelMinute}
+                        selectedSessionIdx=${this._selectedSessionIdx}
                         @session-selected=${this._onSessionSelected}
                     ></lit-user-history>
                 </div>
                 <div class='right-half'>
                     <div class='right-item'>
                         <lit-session-details 
-                            date=${this._date}
+                            date=${this._selectedDate}
                             .sessions=${this._sessions}
                             selectedSessionIdx=${this._selectedSessionIdx}
-                            .tabHistory=${this._tabHistory}
+                            .tabSessions=${this._tabSessions}
                         ></lit-session-details>
                     </div>
                     <div class='right-item'>
                         <lit-timechart
-                            .sessions=${this._sessions}
-                            .tabHistory=${this._tabHistory}
+                            .tabSessions=${this._tabSessions}
                         ></lit-timechart>
                     </div>
                 </div>
@@ -271,22 +519,25 @@ let Page = class Page extends _node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.Lit
 Page.styles = _style__WEBPACK_IMPORTED_MODULE_2__.styles;
 __decorate([
     (0,_node_modules_lit_decorators__WEBPACK_IMPORTED_MODULE_1__.state)()
-], Page.prototype, "_date", void 0);
+], Page.prototype, "_dataHandler", void 0);
+__decorate([
+    (0,_node_modules_lit_decorators__WEBPACK_IMPORTED_MODULE_1__.state)()
+], Page.prototype, "_selectedDate", void 0);
+__decorate([
+    (0,_node_modules_lit_decorators__WEBPACK_IMPORTED_MODULE_1__.state)()
+], Page.prototype, "_availableDates", void 0);
 __decorate([
     (0,_node_modules_lit_decorators__WEBPACK_IMPORTED_MODULE_1__.state)()
 ], Page.prototype, "_sessions", void 0);
+__decorate([
+    (0,_node_modules_lit_decorators__WEBPACK_IMPORTED_MODULE_1__.state)()
+], Page.prototype, "_tabSessions", void 0);
 __decorate([
     (0,_node_modules_lit_decorators__WEBPACK_IMPORTED_MODULE_1__.state)()
 ], Page.prototype, "_currRelMinute", void 0);
 __decorate([
     (0,_node_modules_lit_decorators__WEBPACK_IMPORTED_MODULE_1__.state)()
 ], Page.prototype, "_selectedSessionIdx", void 0);
-__decorate([
-    (0,_node_modules_lit_decorators__WEBPACK_IMPORTED_MODULE_1__.state)()
-], Page.prototype, "_tabHistory", void 0);
-__decorate([
-    (0,_node_modules_lit_decorators__WEBPACK_IMPORTED_MODULE_1__.state)()
-], Page.prototype, "_active", void 0);
 Page = __decorate([
     (0,_node_modules_lit_decorators__WEBPACK_IMPORTED_MODULE_1__.customElement)('lit-page')
 ], Page);
@@ -375,34 +626,15 @@ let SessionDetails = class SessionDetails extends lit__WEBPACK_IMPORTED_MODULE_0
         this.date = "";
         this.sessions = [];
         this.selectedSessionIdx = -1;
-        this.tabHistory = [];
+        this.tabSessions = [];
     }
     /*
      * HELPER FUNCTIONS
      */
     _getCurrTabs() {
         const session = this.sessions[this.selectedSessionIdx];
-        const currTabTimestamps = this.tabHistory.filter(tab => (tab.timestamp >= session.start && tab.timestamp <= session.end));
-        // tabSessions are tabs with start and end dates
-        const tabSessions = [];
-        for (let idx = 0; idx < currTabTimestamps.length; idx++) {
-            // The start of the next tab, if it's the last one, the end of this activity session
-            const endTimestamp = idx !== currTabTimestamps.length - 1 ?
-                currTabTimestamps[idx + 1].timestamp :
-                this.sessions[this.selectedSessionIdx].end;
-            tabSessions.push({
-                url: currTabTimestamps[idx].url,
-                start: currTabTimestamps[idx].timestamp,
-                end: endTimestamp,
-                favIconUrl: currTabTimestamps[idx].favIconUrl,
-                title: currTabTimestamps[idx].title
-            });
-        }
-        console.log("tabSessions:", tabSessions);
-        tabSessions.forEach(tab => {
-            console.log(`Tab ${tab.url}. Started: ${new Date(tab.start).toLocaleTimeString()}. Ended: ${new Date(tab.end).toLocaleTimeString()}`);
-        });
-        return tabSessions;
+        const currTabs = this.tabSessions.filter((tab) => tab.start >= session.start && tab.end <= session.end);
+        return currTabs;
     }
     _getTimestampText(hour, part) {
         let ans = "";
@@ -507,7 +739,7 @@ __decorate([
 ], SessionDetails.prototype, "selectedSessionIdx", void 0);
 __decorate([
     (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.property)({ type: Array, reflect: true })
-], SessionDetails.prototype, "tabHistory", void 0);
+], SessionDetails.prototype, "tabSessions", void 0);
 SessionDetails = __decorate([
     (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.customElement)('lit-session-details')
 ], SessionDetails);
@@ -998,8 +1230,7 @@ var __decorate = (undefined && undefined.__decorate) || function (decorators, ta
 let TimeChart = class TimeChart extends lit__WEBPACK_IMPORTED_MODULE_0__.LitElement {
     constructor() {
         super(...arguments);
-        this.sessions = [];
-        this.tabHistory = [];
+        this.tabSessions = [];
         this.displayTop = 3;
     }
     /*
@@ -1008,28 +1239,9 @@ let TimeChart = class TimeChart extends lit__WEBPACK_IMPORTED_MODULE_0__.LitElem
     _calculateDomainTimes() {
         var _a;
         const domainsScreentime = new Map();
-        let seshIdx = 0;
-        let tabIdx = 0;
-        while (seshIdx != this.sessions.length && tabIdx != this.tabHistory.length) {
-            const tab = this.tabHistory[tabIdx];
-            const sesh = this.sessions[seshIdx];
-            // If this tabTimestamp is before the session
-            if (tab.timestamp < sesh.start) {
-                tabIdx++;
-                // If this tabTimestamp is after the session
-            }
-            else if (tab.timestamp > sesh.end) {
-                seshIdx++;
-                // If this tabTimestamp is within the session
-            }
-            else {
-                const domain = this._getDomain(tab.url);
-                const nextTabTime = tabIdx + 1 < this.tabHistory.length ? this.tabHistory[tabIdx + 1].timestamp : Infinity;
-                const duration = Math.min(nextTabTime, sesh.end) - tab.timestamp;
-                // Update the mapping
-                domainsScreentime.set(domain, ((_a = domainsScreentime.get(domain)) !== null && _a !== void 0 ? _a : 0) + duration);
-                tabIdx++;
-            }
+        for (let tab of this.tabSessions) {
+            const domain = this._getDomain(tab.url);
+            domainsScreentime.set(domain, ((_a = domainsScreentime.get(domain)) !== null && _a !== void 0 ? _a : 0) + tab.end - tab.start);
         }
         return domainsScreentime;
     }
@@ -1097,10 +1309,7 @@ let TimeChart = class TimeChart extends lit__WEBPACK_IMPORTED_MODULE_0__.LitElem
 TimeChart.styles = _style__WEBPACK_IMPORTED_MODULE_2__.styles;
 __decorate([
     (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.property)({ type: Array, reflect: true })
-], TimeChart.prototype, "sessions", void 0);
-__decorate([
-    (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.property)({ type: Array, reflect: true })
-], TimeChart.prototype, "tabHistory", void 0);
+], TimeChart.prototype, "tabSessions", void 0);
 __decorate([
     (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.state)()
 ], TimeChart.prototype, "displayTop", void 0);
@@ -1403,7 +1612,7 @@ let UserHistory = class UserHistory extends lit__WEBPACK_IMPORTED_MODULE_0__.Lit
         this.date = "";
         this.sessions = [];
         this.currRelMinute = 0;
-        this._selectedSessionIdx = -1;
+        this.selectedSessionIdx = -1;
     }
     /*
      * EVENT HANDLERS
@@ -1411,15 +1620,16 @@ let UserHistory = class UserHistory extends lit__WEBPACK_IMPORTED_MODULE_0__.Lit
     _onSessionClick(event) {
         event.stopPropagation();
         const clickedIdx = event.detail.idx;
-        if (this._selectedSessionIdx === clickedIdx) {
-            this._selectedSessionIdx = -1;
+        let newSelectedSessionIdx;
+        if (this.selectedSessionIdx === clickedIdx) {
+            newSelectedSessionIdx = -1;
         }
         else {
-            this._selectedSessionIdx = clickedIdx;
+            newSelectedSessionIdx = clickedIdx;
         }
         const selectedEvent = new CustomEvent('session-selected', {
             detail: {
-                idx: this._selectedSessionIdx
+                idx: newSelectedSessionIdx
             },
             bubbles: true,
             composed: true
@@ -1453,7 +1663,7 @@ let UserHistory = class UserHistory extends lit__WEBPACK_IMPORTED_MODULE_0__.Lit
                     start=${startRelEpoch}
                     end=${endRelEpoch}
                     idx=${idx}
-                    ?selected=${idx === this._selectedSessionIdx}
+                    ?selected=${idx === this.selectedSessionIdx}
                 >
 
                 </lit-user-history-session>
@@ -1478,12 +1688,13 @@ let UserHistory = class UserHistory extends lit__WEBPACK_IMPORTED_MODULE_0__.Lit
      */
     firstUpdated() {
         var _a;
-        console.log("IN FIRSTUPDATE FOR USERHISTORY");
-        // Make present bar the center of the user's screen
-        const presentBar = (_a = this.shadowRoot) === null || _a === void 0 ? void 0 : _a.querySelector('.present-bar');
-        console.log(presentBar);
-        if (presentBar) {
-            presentBar.scrollIntoView({ block: "center" });
+        if (this.date === (new Date).toLocaleDateString()) {
+            // Make present bar the center of the user's screen
+            const presentBar = (_a = this.shadowRoot) === null || _a === void 0 ? void 0 : _a.querySelector('.present-bar');
+            console.log(presentBar);
+            if (presentBar) {
+                presentBar.scrollIntoView({ block: "center" });
+            }
         }
     }
     render() {
@@ -1517,7 +1728,7 @@ let UserHistory = class UserHistory extends lit__WEBPACK_IMPORTED_MODULE_0__.Lit
                             ${this.sessions.map((session, idx) => this._sessionMapHTML(session, idx))}
 
                             <!-- The present timestamp bar -->
-                            ${this._createPresentBarHtml()}
+                            ${(this.date === (new Date).toLocaleDateString()) ? this._createPresentBarHtml() : ''}
                         </div>
                     </div>
             </div>
@@ -1535,8 +1746,8 @@ __decorate([
     (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.property)({ type: Number, reflect: true })
 ], UserHistory.prototype, "currRelMinute", void 0);
 __decorate([
-    (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.state)()
-], UserHistory.prototype, "_selectedSessionIdx", void 0);
+    (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.property)({ type: Number, reflect: true })
+], UserHistory.prototype, "selectedSessionIdx", void 0);
 UserHistory = __decorate([
     (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.customElement)('lit-user-history')
 ], UserHistory);

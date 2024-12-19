@@ -109,6 +109,7 @@ export class DataHandler {
         this._currScreentime = currScreentime;
         if (this.currDate === this.selectedDate) {
             this._publishSessions();
+            this._publishTabSessions();
         }
     }
     set pastScreentimes(pastScreentimes: DateToActivitySession) {
@@ -183,10 +184,15 @@ export class DataHandler {
                 }
                 if (changes.currDate) {
                     // If the current selected date is the current date, update the selected date
+                    let updateSelectedDate = false;
                     if (this.selectedDate === this.currDate) {
-                        this.selectedDate = changes.currDate.newValue;
+                        updateSelectedDate = true;
                     }
+                    // Must update selectedDate AFTER currDate or else it will lead to errors
                     this.currDate = changes.currDate.newValue;
+                    if (updateSelectedDate) {
+                        this.selectedDate = this.currDate;
+                    }
                 }
                 if (changes.currScreentime) {
                     this.currScreentime = (changes.currScreentime.newValue);
@@ -217,6 +223,7 @@ export class DataHandler {
     setSelectedDate(date: string): boolean {
         const availableDates = this._getAvailableDates();
         if (availableDates.includes(date)) {
+            console.log("DATACONTROLLER: Setting selected date to: ", date);
             this.selectedDate = date;
             return true;
         }
