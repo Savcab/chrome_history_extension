@@ -521,12 +521,12 @@ let Page = class Page extends _node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.Lit
         }
         return (0,_node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.html) `
             <div id='mainbody'>
-                <select  @change=${this._onDateChange}>
-                    ${this._availableDates.map((date) => (0,_node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.html) `
-                        <option value=${date} ?selected=${date === this._selectedDate}>${date}</option>
-                    `)}
-                </select>
                 <div class='left-half'>
+                    <select  @change=${this._onDateChange} class='select-date'>
+                        ${this._availableDates.map((date) => (0,_node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.html) `
+                            <option value=${date} ?selected=${date === this._selectedDate}>${date}</option>
+                        `)}
+                    </select>
                     <lit-user-history 
                         .sessions=${this._sessions}
                         date=${this._selectedDate}
@@ -618,6 +618,23 @@ const styles = (0,lit__WEBPACK_IMPORTED_MODULE_0__.css) `
         box-sizing: border-box;
         flex: 1;
         height: 100%;
+    }
+
+    .select-date {
+        --margin: 10px;
+        box-sizing: border-box;
+        height: calc(10% - (var(--margin)));
+        width: calc(100% - (var(--margin) * 2));
+        margin-top: var(--margin);
+        margin-left: var(--margin);
+        margin-right: var(--margin);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        font-size: 1.5em;
+        font-weight: bold;
+        direction: ltr;
     }
 
     .right-half {
@@ -1520,7 +1537,7 @@ const styles = (0,lit__WEBPACK_IMPORTED_MODULE_0__.css) `
 
 :host {
     display: block;
-    height: 100%;
+    height: 90%;
     width: 100%;
 }
 
@@ -1533,20 +1550,10 @@ const styles = (0,lit__WEBPACK_IMPORTED_MODULE_0__.css) `
     padding-bottom: 10px;
 }
 
-.date {
-    box-sizing: border-box;
-    display: flex;
-    justify-content: center;
-    padding: 5px;
-    font-size: 1.25em;
-    font-weight: bold;
-    height: 5%;
-}
-
 .timeline-scrolling-container {
     box-sizing: border-box;
     width: 100%;
-    height: 95%;
+    height: 100%;
     overflow-y: scroll;
     padding: 15px;
 }
@@ -1730,31 +1737,30 @@ let UserHistory = class UserHistory extends lit__WEBPACK_IMPORTED_MODULE_0__.Lit
         }
         return (0,lit__WEBPACK_IMPORTED_MODULE_0__.html) `
             <div class="mainbody">
-                <div class="date">${this.date}</div>
-                    <div class="timeline-scrolling-container">
-                        <div class="timeline"
-                            @session-clicked=${this._onSessionClick}
-                        >
-                            <!-- The Timeslot templates -->
-                            ${timeslots.map((timeslot) => {
+                <div class="timeline-scrolling-container">
+                    <div class="timeline"
+                        @session-clicked=${this._onSessionClick}
+                    >
+                        <!-- The Timeslot templates -->
+                        ${timeslots.map((timeslot) => {
             return (0,lit__WEBPACK_IMPORTED_MODULE_0__.html) `
-                                    <div class="timeslot ${timeslot.part === 0 ? 'hour-start' : ''} ${timeslot.part === _constants__WEBPACK_IMPORTED_MODULE_3__.userhistory__timeslotsPerHour - 1 ? 'hour-end' : ''}">
-                                        ${(timeslot.part === 0) ?
+                                <div class="timeslot ${timeslot.part === 0 ? 'hour-start' : ''} ${timeslot.part === _constants__WEBPACK_IMPORTED_MODULE_3__.userhistory__timeslotsPerHour - 1 ? 'hour-end' : ''}">
+                                    ${(timeslot.part === 0) ?
                 (0,lit__WEBPACK_IMPORTED_MODULE_0__.html) `<div class="timestamp">
-                                                    ${this._getTimestampText(timeslot.hour)}
-                                                </div>`
+                                                ${this._getTimestampText(timeslot.hour)}
+                                            </div>`
                 : ''}
-                                    </div>
-                                `;
+                                </div>
+                            `;
         })}
 
-                            <!-- The actual user activity sessions -->
-                            ${this.sessions.map((session, idx) => this._sessionMapHTML(session, idx))}
+                        <!-- The actual user activity sessions -->
+                        ${this.sessions.map((session, idx) => this._sessionMapHTML(session, idx))}
 
-                            <!-- The present timestamp bar -->
-                            ${((new Date(this.date)).toLocaleDateString() === (new Date).toLocaleDateString()) ? this._createPresentBarHtml() : ''}
-                        </div>
+                        <!-- The present timestamp bar -->
+                        ${((new Date(this.date)).toLocaleDateString() === (new Date).toLocaleDateString()) ? this._createPresentBarHtml() : ''}
                     </div>
+                </div>
             </div>
         `;
     }

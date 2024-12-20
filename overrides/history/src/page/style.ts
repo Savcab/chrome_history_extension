@@ -20,6 +20,23 @@ export const styles = css`
         height: 100%;
     }
 
+    .select-date {
+        --margin: 10px;
+        box-sizing: border-box;
+        height: calc(10% - (var(--margin)));
+        width: calc(100% - (var(--margin) * 2));
+        margin-top: var(--margin);
+        margin-left: var(--margin);
+        margin-right: var(--margin);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        font-size: 1.5em;
+        font-weight: bold;
+        direction: ltr;
+    }
+
     .right-half {
         box-sizing: border-box;
         flex: 1;

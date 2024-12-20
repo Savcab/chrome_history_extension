@@ -113,31 +113,30 @@ class UserHistory extends LitElement {
 
         return html`
             <div class="mainbody">
-                <div class="date">${this.date}</div>
-                    <div class="timeline-scrolling-container">
-                        <div class="timeline"
-                            @session-clicked=${this._onSessionClick}
-                        >
-                            <!-- The Timeslot templates -->
-                            ${timeslots.map((timeslot) => {
-                                return html`
-                                    <div class="timeslot ${timeslot.part === 0 ? 'hour-start' : ''} ${timeslot.part === userhistory__timeslotsPerHour-1 ? 'hour-end' : ''}">
-                                        ${ (timeslot.part === 0) ? 
-                                            html`<div class="timestamp">
-                                                    ${this._getTimestampText(timeslot.hour)}
-                                                </div>` 
-                                                : ''}
-                                    </div>
-                                `;
-                            })}
+                <div class="timeline-scrolling-container">
+                    <div class="timeline"
+                        @session-clicked=${this._onSessionClick}
+                    >
+                        <!-- The Timeslot templates -->
+                        ${timeslots.map((timeslot) => {
+                            return html`
+                                <div class="timeslot ${timeslot.part === 0 ? 'hour-start' : ''} ${timeslot.part === userhistory__timeslotsPerHour-1 ? 'hour-end' : ''}">
+                                    ${ (timeslot.part === 0) ? 
+                                        html`<div class="timestamp">
+                                                ${this._getTimestampText(timeslot.hour)}
+                                            </div>` 
+                                            : ''}
+                                </div>
+                            `;
+                        })}
 
-                            <!-- The actual user activity sessions -->
-                            ${this.sessions.map((session, idx) => this._sessionMapHTML(session, idx))}
+                        <!-- The actual user activity sessions -->
+                        ${this.sessions.map((session, idx) => this._sessionMapHTML(session, idx))}
 
-                            <!-- The present timestamp bar -->
-                            ${((new Date(this.date)).toLocaleDateString() === (new Date).toLocaleDateString()) ? this._createPresentBarHtml(): ''}
-                        </div>
+                        <!-- The present timestamp bar -->
+                        ${((new Date(this.date)).toLocaleDateString() === (new Date).toLocaleDateString()) ? this._createPresentBarHtml(): ''}
                     </div>
+                </div>
             </div>
         `;
     }

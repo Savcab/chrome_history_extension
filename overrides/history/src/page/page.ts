@@ -85,12 +85,12 @@ class Page extends LitElement {
         }
         return html`
             <div id='mainbody'>
-                <select  @change=${this._onDateChange}>
-                    ${this._availableDates.map((date) => html`
-                        <option value=${date} ?selected=${date === this._selectedDate}>${date}</option>
-                    `)}
-                </select>
                 <div class='left-half'>
+                    <select  @change=${this._onDateChange} class='select-date'>
+                        ${this._availableDates.map((date) => html`
+                            <option value=${date} ?selected=${date === this._selectedDate}>${date}</option>
+                        `)}
+                    </select>
                     <lit-user-history 
                         .sessions=${this._sessions}
                         date=${this._selectedDate}

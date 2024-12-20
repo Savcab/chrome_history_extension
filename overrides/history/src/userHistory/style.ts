@@ -5,7 +5,7 @@ export const styles = css`
 
 :host {
     display: block;
-    height: 100%;
+    height: 90%;
     width: 100%;
 }
 
@@ -18,20 +18,10 @@ export const styles = css`
     padding-bottom: 10px;
 }
 
-.date {
-    box-sizing: border-box;
-    display: flex;
-    justify-content: center;
-    padding: 5px;
-    font-size: 1.25em;
-    font-weight: bold;
-    height: 5%;
-}
-
 .timeline-scrolling-container {
     box-sizing: border-box;
     width: 100%;
-    height: 95%;
+    height: 100%;
     overflow-y: scroll;
     padding: 15px;
 }
