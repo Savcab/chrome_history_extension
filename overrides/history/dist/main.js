@@ -467,6 +467,7 @@ let Page = class Page extends _node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.Lit
         this._domainTimes = new Map();
         // States that are used to display and handled by page
         this._selectedSessionIdx = -1;
+        this._initialized = false;
     }
     /**
      * LIFECYCLE METHODS
@@ -495,6 +496,7 @@ let Page = class Page extends _node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.Lit
         this._domainTimes = this._dataHandler.subscribeDomainTimes((newDomainTimes) => {
             this._domainTimes = newDomainTimes;
         });
+        this._initialized = true;
     }
     disconnectedCallback() {
         super.disconnectedCallback();
@@ -514,6 +516,9 @@ let Page = class Page extends _node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.Lit
         this._dataHandler.setSelectedDate(newDate);
     }
     render() {
+        if (!this._initialized) {
+            return (0,_node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.html) `<div>Loading...</div>`;
+        }
         return (0,_node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.html) `
             <div id='mainbody'>
                 <select  @change=${this._onDateChange}>
@@ -574,6 +579,9 @@ __decorate([
 __decorate([
     (0,_node_modules_lit_decorators__WEBPACK_IMPORTED_MODULE_1__.state)()
 ], Page.prototype, "_selectedSessionIdx", void 0);
+__decorate([
+    (0,_node_modules_lit_decorators__WEBPACK_IMPORTED_MODULE_1__.state)()
+], Page.prototype, "_initialized", void 0);
 Page = __decorate([
     (0,_node_modules_lit_decorators__WEBPACK_IMPORTED_MODULE_1__.customElement)('lit-page')
 ], Page);
@@ -1704,11 +1712,11 @@ let UserHistory = class UserHistory extends lit__WEBPACK_IMPORTED_MODULE_0__.Lit
      */
     firstUpdated() {
         var _a;
-        if (this.date === (new Date).toLocaleDateString()) {
+        if ((new Date(this.date)).toLocaleDateString() === (new Date).toLocaleDateString()) {
             // Make present bar the center of the user's screen
             const presentBar = (_a = this.shadowRoot) === null || _a === void 0 ? void 0 : _a.querySelector('.present-bar');
-            console.log(presentBar);
             if (presentBar) {
+                console.log("officially calling the the scroll into view function");
                 presentBar.scrollIntoView({ block: "center" });
             }
         }
@@ -1744,7 +1752,7 @@ let UserHistory = class UserHistory extends lit__WEBPACK_IMPORTED_MODULE_0__.Lit
                             ${this.sessions.map((session, idx) => this._sessionMapHTML(session, idx))}
 
                             <!-- The present timestamp bar -->
-                            ${(this.date === (new Date).toLocaleDateString()) ? this._createPresentBarHtml() : ''}
+                            ${((new Date(this.date)).toLocaleDateString() === (new Date).toLocaleDateString()) ? this._createPresentBarHtml() : ''}
                         </div>
                     </div>
             </div>

@@ -26,6 +26,7 @@ class Page extends LitElement {
 
     // States that are used to display and handled by page
     @state() _selectedSessionIdx: number = -1;
+    @state() _initialized: boolean = false;
 
     /**
      * LIFECYCLE METHODS
@@ -55,6 +56,7 @@ class Page extends LitElement {
         this._domainTimes = this._dataHandler.subscribeDomainTimes((newDomainTimes) => {
             this._domainTimes = newDomainTimes
         });
+        this._initialized = true;
     }
 
     disconnectedCallback(): void {
@@ -78,7 +80,9 @@ class Page extends LitElement {
     }
 
     render() {
-
+        if (!this._initialized) {
+            return html`<div>Loading...</div>`;
+        }
         return html`
             <div id='mainbody'>
                 <select  @change=${this._onDateChange}>
