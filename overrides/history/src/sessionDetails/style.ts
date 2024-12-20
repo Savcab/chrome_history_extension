@@ -71,4 +71,14 @@ export const styles = css`
     text-decoration-color: gray;
 }
 
+.zero-state {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 95%;
+    width: 100%;
+    font-size: 1.5em;
+    text-align: center;
+    font-weight: bold;
+}
 `;

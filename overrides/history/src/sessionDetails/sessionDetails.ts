@@ -118,13 +118,21 @@ class SessionDetails extends LitElement {
         }
     }
 
+    private _zeroStateHtml(): TemplateResult {
+        return html`
+            <div class="zero-state">
+                Click on a session to view its details
+            </div>
+        `;
+    }
+
     render() {
         return html`
             <div class="mainbody">
                 <div class="header">
                     
                 </div>
-                ${this._createTimelineHtml()}
+                ${(this.selectedSessionIdx !== -1) ? this._createTimelineHtml(): this._zeroStateHtml()}
             </div>    
         `;
     }

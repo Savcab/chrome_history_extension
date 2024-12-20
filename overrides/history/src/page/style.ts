@@ -21,7 +21,7 @@ export const styles = css`
     }
 
     .select-date {
-        --margin: 10px;
+        --margin: 0px;
         box-sizing: border-box;
         height: calc(10% - (var(--margin)));
         width: calc(100% - (var(--margin) * 2));
@@ -34,7 +34,11 @@ export const styles = css`
         text-align: center;
         font-size: 1.5em;
         font-weight: bold;
-        direction: ltr;
+        padding: 10px;
+
+        border: none;
+        outline: none;
+        background-color: lightskyblue;
     }
 
     .right-half {

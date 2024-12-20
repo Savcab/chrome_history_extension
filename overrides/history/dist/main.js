@@ -621,7 +621,7 @@ const styles = (0,lit__WEBPACK_IMPORTED_MODULE_0__.css) `
     }
 
     .select-date {
-        --margin: 10px;
+        --margin: 0px;
         box-sizing: border-box;
         height: calc(10% - (var(--margin)));
         width: calc(100% - (var(--margin) * 2));
@@ -634,7 +634,11 @@ const styles = (0,lit__WEBPACK_IMPORTED_MODULE_0__.css) `
         text-align: center;
         font-size: 1.5em;
         font-weight: bold;
-        direction: ltr;
+        padding: 10px;
+
+        border: none;
+        outline: none;
+        background-color: lightskyblue;
     }
 
     .right-half {
@@ -777,13 +781,20 @@ let SessionDetails = class SessionDetails extends lit__WEBPACK_IMPORTED_MODULE_0
             return (0,lit__WEBPACK_IMPORTED_MODULE_0__.html) ``;
         }
     }
+    _zeroStateHtml() {
+        return (0,lit__WEBPACK_IMPORTED_MODULE_0__.html) `
+            <div class="zero-state">
+                Click on a session to view its details
+            </div>
+        `;
+    }
     render() {
         return (0,lit__WEBPACK_IMPORTED_MODULE_0__.html) `
             <div class="mainbody">
                 <div class="header">
                     
                 </div>
-                ${this._createTimelineHtml()}
+                ${(this.selectedSessionIdx !== -1) ? this._createTimelineHtml() : this._zeroStateHtml()}
             </div>    
         `;
     }
@@ -892,6 +903,16 @@ const styles = (0,lit__WEBPACK_IMPORTED_MODULE_0__.css) `
     text-decoration-color: gray;
 }
 
+.zero-state {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 95%;
+    width: 100%;
+    font-size: 1.5em;
+    text-align: center;
+    font-weight: bold;
+}
 `;
 
 
