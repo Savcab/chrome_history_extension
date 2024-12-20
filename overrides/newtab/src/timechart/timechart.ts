@@ -1,9 +1,8 @@
-import { LitElement, html, css, CSSResultGroup } from 'lit';
+import { LitElement, html } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
-import { ActivitySession, Tab, ChartItem } from '../types';
+import { ChartItem } from '../types';
 import { styles } from './style';
 import './chart/chart';
-import { Session } from '../userHistory/session/session';
 
 @customElement('lit-timechart')
 class TimeChart extends LitElement {

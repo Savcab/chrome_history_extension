@@ -1,8 +1,7 @@
-import { LitElement, html, css, CSSResult, CSSResultGroup, TemplateResult, PropertyValues } from 'lit';
-import { customElement, property, state } from 'lit/decorators.js';
+import { LitElement, html, CSSResultGroup, TemplateResult } from 'lit';
+import { customElement, property } from 'lit/decorators.js';
 import {styles} from './style'
 import { ActivitySession, TimeSlot } from '../types';
-import { styleMap } from 'lit/directives/style-map';
 import { userhistory__hourToVh, userhistory__timeslotsPerHour } from '../constants';
 import './session/session';
 

@@ -1,4 +1,4 @@
-import './page/page.ts'
+import './page/page';
 
 const startOfDay = new Date();
 startOfDay.setHours(0, 0, 0, 0);

@@ -1,4 +1,4 @@
-import { LitElement, html, css, CSSResult, CSSResultGroup, TemplateResult } from 'lit';
+import { LitElement, html, CSSResultGroup} from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import {styles} from './style'
 import { userhistory__hourToVh } from '../../constants';

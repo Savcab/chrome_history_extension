@@ -1,11 +1,10 @@
-import { LitElement, html, css, CSSResultGroup } from '../../node_modules/lit';
-import { customElement, state } from '../../node_modules/lit/decorators';
+import { LitElement, html, CSSResultGroup } from 'lit';
+import { customElement, state } from 'lit/decorators.js';
 import { styles } from './style';
-import { ActivitySession, Tab, TabTimestamp } from '../types';
+import { ActivitySession, Tab } from '../types';
 import '../userHistory/userHistory';
 import '../sessionDetails/sessionDetails';
 import '../timechart/timechart';
-import { minTabSeshLength, minActiveSeshGap } from '../constants';
 import { DataHandler } from '../model';
 
 @customElement('lit-page')
