@@ -10,32 +10,13 @@ class TimeChart extends LitElement {
 
     static styles = styles;
 
-    @property({type: Array, reflect: true}) tabSessions: Tab[] = [];
+    @property({type: Object, reflect: true}) domainTimes: Map<string, number> = new Map();
 
     @state() displayTop: number = 3;
     
     /*
      * HELPER FUNCTIONS 
      */
-    private _calculateDomainTimes() {
-        const domainsScreentime: Map<string, number> = new Map();
-        for (let tab of this.tabSessions) {
-            const domain = this._getDomain(tab.url);
-            domainsScreentime.set(domain, (domainsScreentime.get(domain) ?? 0 ) + tab.end - tab.start);
-        }
-        return domainsScreentime;
-    }
-
-    private _getDomain(url: string) {
-        try {
-            const parsedUrl = new URL(url);
-            return parsedUrl.hostname;
-        } catch (error) {
-            console.error("Invalid URL:", url);
-            return url;
-        }
-    }
-
     private _hoursToString(hours: number): string {
         let numHours = Math.floor(hours);
         let numMinutes = Math.floor((hours - numHours) * 60);
@@ -52,15 +33,14 @@ class TimeChart extends LitElement {
 
     render() {
         // Sort the domains based on screentimes
-        const domainsScreentime = this._calculateDomainTimes();
-        const domainsSorted = Array.from(domainsScreentime.keys());
-        domainsSorted.sort((a, b) => (domainsScreentime.get(b) ?? 0) - (domainsScreentime.get(a) ?? 0));
+        const domainsSorted = Array.from(this.domainTimes.keys());
+        domainsSorted.sort((a, b) => (this.domainTimes.get(b) ?? 0) - (this.domainTimes.get(a) ?? 0));
         // Create data for the chart
         let items: ChartItem[] = [];
         for (let domain of domainsSorted) {
             items.push({
                 name: domain,
-                value: (domainsScreentime.get(domain) ?? 0) / 1000 / 60 / 60
+                value: (this.domainTimes.get(domain) ?? 0) / 1000 / 60 / 60
             })
         }
         let screentimeSum = items.reduce((acc, item) => acc + item.value, 0);

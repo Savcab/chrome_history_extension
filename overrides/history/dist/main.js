@@ -60,12 +60,17 @@ class DataHandler {
     }
     _publishSessions() {
         this._sessions__updated_callbacks.forEach(callback => callback(this._getSessions()));
+        this._publishDomainTimes();
     }
     _publishTabSessions() {
         this._tabSessions__updated_callbacks.forEach(callback => callback(this._getTabSessions()));
+        this._publishDomainTimes();
     }
     _publishCurrRelMinute() {
         this._currRelMinute__updated_callbacks.forEach(callback => callback(this.currRelMinute));
+    }
+    _publishDomainTimes() {
+        this._domainTimes__updated_callbacks.forEach(callback => callback(this._getDomainTimes()));
     }
     // Subscribe functions (to be called by consumers)
     subscribeAvailableDates(callback) {
@@ -87,6 +92,10 @@ class DataHandler {
     subscribeCurrRelMinute(callback) {
         this._currRelMinute__updated_callbacks.push(callback);
         return this.currRelMinute;
+    }
+    subscribeDomainTimes(callback) {
+        this._domainTimes__updated_callbacks.push(callback);
+        return this._getDomainTimes();
     }
     /*
      * SPECIAL SETTERS + GETTERS - when the "data product"'s dependencies change, a new publish has to be triggered
@@ -179,6 +188,7 @@ class DataHandler {
         this._sessions__updated_callbacks = [];
         this._tabSessions__updated_callbacks = [];
         this._currRelMinute__updated_callbacks = [];
+        this._domainTimes__updated_callbacks = [];
         // Don't do much, need to call init()
     }
     // MUST be called before being used
@@ -282,6 +292,15 @@ class DataHandler {
         const tabHistory = this.currDate === this.selectedDate ? this.currTabHistory : this.pastTabHistories[this.selectedDate];
         const processedTabHistory = this._processRawTabHistory(tabHistory);
         return this._createTabSessions(processedTabHistory);
+    }
+    _getDomainTimes() {
+        var _a;
+        const domainsScreentime = new Map();
+        for (let tab of this._getTabSessions()) {
+            const domain = this._getDomain(tab.url);
+            domainsScreentime.set(domain, ((_a = domainsScreentime.get(domain)) !== null && _a !== void 0 ? _a : 0) + tab.end - tab.start);
+        }
+        return domainsScreentime;
     }
     /**
      * HELPER FUNCTIONS
@@ -392,6 +411,16 @@ class DataHandler {
         startOfDay.setHours(0, 0, 0, 0);
         return (now.getTime() - startOfDay.getTime()) / (1000 * 60);
     }
+    _getDomain(url) {
+        try {
+            const parsedUrl = new URL(url);
+            return parsedUrl.hostname;
+        }
+        catch (error) {
+            console.error("Invalid URL:", url);
+            return url;
+        }
+    }
 }
 
 
@@ -435,6 +464,7 @@ let Page = class Page extends _node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.Lit
         this._sessions = [];
         this._tabSessions = [];
         this._currRelMinute = 0;
+        this._domainTimes = new Map();
         // States that are used to display and handled by page
         this._selectedSessionIdx = -1;
     }
@@ -461,6 +491,9 @@ let Page = class Page extends _node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.Lit
         });
         this._currRelMinute = this._dataHandler.subscribeCurrRelMinute((newCurrRelMinute) => {
             this._currRelMinute = newCurrRelMinute;
+        });
+        this._domainTimes = this._dataHandler.subscribeDomainTimes((newDomainTimes) => {
+            this._domainTimes = newDomainTimes;
         });
     }
     disconnectedCallback() {
@@ -508,7 +541,7 @@ let Page = class Page extends _node_modules_lit__WEBPACK_IMPORTED_MODULE_0__.Lit
                     </div>
                     <div class='right-item'>
                         <lit-timechart
-                            .tabSessions=${this._tabSessions}
+                            .domainTimes=${this._domainTimes}
                         ></lit-timechart>
                     </div>
                 </div>
@@ -535,6 +568,9 @@ __decorate([
 __decorate([
     (0,_node_modules_lit_decorators__WEBPACK_IMPORTED_MODULE_1__.state)()
 ], Page.prototype, "_currRelMinute", void 0);
+__decorate([
+    (0,_node_modules_lit_decorators__WEBPACK_IMPORTED_MODULE_1__.state)()
+], Page.prototype, "_domainTimes", void 0);
 __decorate([
     (0,_node_modules_lit_decorators__WEBPACK_IMPORTED_MODULE_1__.state)()
 ], Page.prototype, "_selectedSessionIdx", void 0);
@@ -1230,31 +1266,12 @@ var __decorate = (undefined && undefined.__decorate) || function (decorators, ta
 let TimeChart = class TimeChart extends lit__WEBPACK_IMPORTED_MODULE_0__.LitElement {
     constructor() {
         super(...arguments);
-        this.tabSessions = [];
+        this.domainTimes = new Map();
         this.displayTop = 3;
     }
     /*
      * HELPER FUNCTIONS
      */
-    _calculateDomainTimes() {
-        var _a;
-        const domainsScreentime = new Map();
-        for (let tab of this.tabSessions) {
-            const domain = this._getDomain(tab.url);
-            domainsScreentime.set(domain, ((_a = domainsScreentime.get(domain)) !== null && _a !== void 0 ? _a : 0) + tab.end - tab.start);
-        }
-        return domainsScreentime;
-    }
-    _getDomain(url) {
-        try {
-            const parsedUrl = new URL(url);
-            return parsedUrl.hostname;
-        }
-        catch (error) {
-            console.error("Invalid URL:", url);
-            return url;
-        }
-    }
     _hoursToString(hours) {
         let numHours = Math.floor(hours);
         let numMinutes = Math.floor((hours - numHours) * 60);
@@ -1269,15 +1286,14 @@ let TimeChart = class TimeChart extends lit__WEBPACK_IMPORTED_MODULE_0__.LitElem
     render() {
         var _a;
         // Sort the domains based on screentimes
-        const domainsScreentime = this._calculateDomainTimes();
-        const domainsSorted = Array.from(domainsScreentime.keys());
-        domainsSorted.sort((a, b) => { var _a, _b; return ((_a = domainsScreentime.get(b)) !== null && _a !== void 0 ? _a : 0) - ((_b = domainsScreentime.get(a)) !== null && _b !== void 0 ? _b : 0); });
+        const domainsSorted = Array.from(this.domainTimes.keys());
+        domainsSorted.sort((a, b) => { var _a, _b; return ((_a = this.domainTimes.get(b)) !== null && _a !== void 0 ? _a : 0) - ((_b = this.domainTimes.get(a)) !== null && _b !== void 0 ? _b : 0); });
         // Create data for the chart
         let items = [];
         for (let domain of domainsSorted) {
             items.push({
                 name: domain,
-                value: ((_a = domainsScreentime.get(domain)) !== null && _a !== void 0 ? _a : 0) / 1000 / 60 / 60
+                value: ((_a = this.domainTimes.get(domain)) !== null && _a !== void 0 ? _a : 0) / 1000 / 60 / 60
             });
         }
         let screentimeSum = items.reduce((acc, item) => acc + item.value, 0);
@@ -1308,8 +1324,8 @@ let TimeChart = class TimeChart extends lit__WEBPACK_IMPORTED_MODULE_0__.LitElem
 };
 TimeChart.styles = _style__WEBPACK_IMPORTED_MODULE_2__.styles;
 __decorate([
-    (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.property)({ type: Array, reflect: true })
-], TimeChart.prototype, "tabSessions", void 0);
+    (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.property)({ type: Object, reflect: true })
+], TimeChart.prototype, "domainTimes", void 0);
 __decorate([
     (0,lit_decorators_js__WEBPACK_IMPORTED_MODULE_1__.state)()
 ], TimeChart.prototype, "displayTop", void 0);

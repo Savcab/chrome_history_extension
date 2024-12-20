@@ -22,6 +22,7 @@ class Page extends LitElement {
     @state() _sessions: ActivitySession[] = [];
     @state() _tabSessions: Tab[] = [];
     @state() _currRelMinute: number = 0;
+    @state() _domainTimes: Map<string, number> = new Map();
 
     // States that are used to display and handled by page
     @state() _selectedSessionIdx: number = -1;
@@ -50,6 +51,9 @@ class Page extends LitElement {
         });
         this._currRelMinute = this._dataHandler.subscribeCurrRelMinute((newCurrRelMinute) => {
             this._currRelMinute = newCurrRelMinute
+        });
+        this._domainTimes = this._dataHandler.subscribeDomainTimes((newDomainTimes) => {
+            this._domainTimes = newDomainTimes
         });
     }
 
@@ -102,7 +106,7 @@ class Page extends LitElement {
                     </div>
                     <div class='right-item'>
                         <lit-timechart
-                            .tabSessions=${this._tabSessions}
+                            .domainTimes=${this._domainTimes}
                         ></lit-timechart>
                     </div>
                 </div>

@@ -6,6 +6,7 @@ type SelectedDateSetter = (selectedDate: string) => void;
 type SessionsSetter = (sessions: ActivitySession[]) => void;
 type TabSessionsSetter = (tabSessions: Tab[]) => void;
 type CurrRelMinuteSetter = (currRelMinute: number) => void;
+type DomainTimesSetter = (domainTimes: Map<string, number>) => void;
 
 type currSeshType = {
     start: number;
@@ -45,6 +46,7 @@ export class DataHandler {
     private _sessions__updated_callbacks: SessionsSetter[] = [];
     private _tabSessions__updated_callbacks: TabSessionsSetter[] = [];
     private _currRelMinute__updated_callbacks: CurrRelMinuteSetter[] = [];
+    private _domainTimes__updated_callbacks: DomainTimesSetter[] = [];
     
     // Publish functions
     private _publishAvailableDates() {
@@ -55,12 +57,17 @@ export class DataHandler {
     }
     private _publishSessions() {
         this._sessions__updated_callbacks.forEach(callback => callback(this._getSessions()));
+        this._publishDomainTimes();
     }
     private _publishTabSessions() {
         this._tabSessions__updated_callbacks.forEach(callback => callback(this._getTabSessions()));
+        this._publishDomainTimes();
     }
     private _publishCurrRelMinute() {
         this._currRelMinute__updated_callbacks.forEach(callback => callback(this.currRelMinute));
+    }
+    private _publishDomainTimes() {
+        this._domainTimes__updated_callbacks.forEach(callback => callback(this._getDomainTimes()));
     }
 
     // Subscribe functions (to be called by consumers)
@@ -83,6 +90,10 @@ export class DataHandler {
     public subscribeCurrRelMinute(callback: CurrRelMinuteSetter): number {
         this._currRelMinute__updated_callbacks.push(callback);
         return this.currRelMinute;
+    }
+    public subscribeDomainTimes(callback: DomainTimesSetter): Map<string, number> {
+        this._domainTimes__updated_callbacks.push(callback);
+        return this._getDomainTimes();
     }
 
 
@@ -265,6 +276,15 @@ export class DataHandler {
         return this._createTabSessions(processedTabHistory);
     }
 
+    private _getDomainTimes(): Map<string, number> {
+        const domainsScreentime: Map<string, number> = new Map();
+        for (let tab of this._getTabSessions()) {
+            const domain = this._getDomain(tab.url);
+            domainsScreentime.set(domain, (domainsScreentime.get(domain) ?? 0 ) + tab.end - tab.start);
+        }
+        return domainsScreentime;
+    }
+
     /**
      * HELPER FUNCTIONS
      */
@@ -379,6 +399,16 @@ export class DataHandler {
         const startOfDay = new Date();
         startOfDay.setHours(0, 0, 0, 0);
         return (now.getTime() - startOfDay.getTime()) / (1000 * 60);
+    }
+
+    private _getDomain(url: string) {
+        try {
+            const parsedUrl = new URL(url);
+            return parsedUrl.hostname;
+        } catch (error) {
+            console.error("Invalid URL:", url);
+            return url;
+        }
     }
 
 }
